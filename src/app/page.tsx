@@ -15,6 +15,7 @@ const TrashIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="16" hei
 const CloseIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> );
 const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>);
 const SaveIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>);
+const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6B7280' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
 
 
 // Interfaces
@@ -95,6 +96,14 @@ export default function VeedoresPage() {
   const [hoveredRowId, setHoveredRowId] = useState<number | null>(null);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
+  // Estado para los filtros
+  const [searchCodSitio, setSearchCodSitio] = useState<string>('');
+  const [searchCiudad, setSearchCiudad] = useState<string>('');
+  const [searchDepartamento, setSearchDepartamento] = useState<string>('');
+  const [searchCodCiudad, setSearchCodCiudad] = useState<string>('');
+  const [searchSitio, setSearchSitio] = useState<string>(''); // Nuevo estado para el filtro de sitio
+  const [filteredVeedores, setFilteredVeedores] = useState<Veedor[]>([]);
+
   // Estado para el modal de edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVeedor, setEditingVeedor] = useState<Partial<Veedor> | null>(null);
@@ -102,6 +111,21 @@ export default function VeedoresPage() {
 
   const obtenerVeedores = async () => { setLoading(true); setError(null); const { data, error } = await supabase.from('veedores').select('*').order('id', { ascending: true }); if (error) { setError("Error al cargar datos: " + error.message); } else { setVeedores(data as Veedor[]); } setLoading(false); };
   useEffect(() => { obtenerVeedores(); }, []);
+
+  // Efecto para el filtrado dinámico
+  useEffect(() => {
+    const filtered = veedores.filter(veedor => {
+      const matchCodSitio = veedor['Cod_Sitio']?.toLowerCase().includes(searchCodSitio.toLowerCase());
+      const matchCiudad = veedor['ciudad']?.toLowerCase().includes(searchCiudad.toLowerCase());
+      const matchDepartamento = veedor['departamento']?.toLowerCase().includes(searchDepartamento.toLowerCase());
+      const matchCodCiudad = String(veedor['Cod_Ciudad'])?.toLowerCase().includes(searchCodCiudad.toLowerCase());
+      const matchSitio = veedor['sitio']?.toLowerCase().includes(searchSitio.toLowerCase()); // Nueva condición de filtro
+
+      return matchCodSitio && matchCiudad && matchDepartamento && matchCodCiudad && matchSitio;
+    });
+    setFilteredVeedores(filtered);
+  }, [veedores, searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio]);
+
   const handleSelectRow = (id: number) => { setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]); };
   const handleSelectAll = () => { setSelectedRows(selectedRows.length === veedores.length ? [] : veedores.map(v => v.id)); };
   const handleDeleteSelected = async () => { if (selectedRows.length === 0) return; const confirmDelete = window.confirm(`¿Seguro que quieres eliminar ${selectedRows.length} registro(s)?`); if (confirmDelete) { setLoading(true); const { error } = await supabase.from('veedores').delete().in('id', selectedRows); if (error) { setError("Error al eliminar: " + error.message); } else { await obtenerVeedores(); setSelectedRows([]); } setLoading(false); } };
@@ -168,12 +192,36 @@ export default function VeedoresPage() {
           <Image src="/logo.jpg" alt="Logo" width={250} height={80} priority />
           <h1 style={styles.title}>Pruebas ICFES 11A 2025</h1>
         </header>
-        <div style={{...styles.actionsContainer, marginRight: '2rem'}}>
-          <ImportButton onImportSuccess={obtenerVeedores} />
-          <button onClick={handleDeleteSelected} disabled={selectedRows.length === 0} style={selectedRows.length > 0 ? styles.deleteButton : { ...styles.deleteButton, ...styles.deleteButtonDisabled }}>
-            <TrashIcon />
-            Eliminar ({selectedRows.length})
-          </button>
+        <div style={styles.toolbarContainer}>
+          <div style={styles.searchFilterContainer}>
+            <div style={styles.searchContainer}>
+              <SearchIcon />
+              <input type="text" placeholder="Buscar por Cod_Sitio..." value={searchCodSitio} onChange={(e) => setSearchCodSitio(e.target.value)} style={styles.searchInput} />
+            </div>
+            <div style={styles.searchContainer}>
+              <SearchIcon />
+              <input type="text" placeholder="Buscar por Sitio..." value={searchSitio} onChange={(e) => setSearchSitio(e.target.value)} style={styles.searchInput} />
+            </div>
+            <div style={styles.searchContainer}>
+              <SearchIcon />
+              <input type="text" placeholder="Buscar por Ciudad..." value={searchCiudad} onChange={(e) => setSearchCiudad(e.target.value)} style={styles.searchInput} />
+            </div>
+            <div style={styles.searchContainer}>
+              <SearchIcon />
+              <input type="text" placeholder="Buscar por Departamento..." value={searchDepartamento} onChange={(e) => setSearchDepartamento(e.target.value)} style={styles.searchInput} />
+            </div>
+            <div style={styles.searchContainer}>
+              <SearchIcon />
+              <input type="text" placeholder="Buscar por Cod_Ciudad..." value={searchCodCiudad} onChange={(e) => setSearchCodCiudad(e.target.value)} style={styles.searchInput} />
+            </div>
+          </div>
+          <div style={styles.actionsContainer}>
+            <ImportButton onImportSuccess={obtenerVeedores} />
+            <button onClick={handleDeleteSelected} disabled={selectedRows.length === 0} style={selectedRows.length > 0 ? styles.deleteButton : { ...styles.deleteButton, ...styles.deleteButtonDisabled }}>
+              <TrashIcon />
+              Eliminar ({selectedRows.length})
+            </button>
+          </div>
         </div>
         {loading && <p>Cargando datos...</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -189,7 +237,7 @@ export default function VeedoresPage() {
                 </tr>
               </thead>
               <tbody>
-                {veedores.map((veedor, index) => (
+                {filteredVeedores.map((veedor, index) => (
                   <tr key={veedor.id} style={{ ...styles.tr, backgroundColor: selectedRows.includes(veedor.id) ? '#E0E7FF' : (hoveredRowId === veedor.id ? '#F9FAFB' : 'transparent') }} onMouseEnter={() => setHoveredRowId(veedor.id)} onMouseLeave={() => setHoveredRowId(null)}>
                     <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
                     <td style={styles.td}>{index + 1}</td>
@@ -216,7 +264,7 @@ export default function VeedoresPage() {
         <div style={styles.modalOverlay}>
           <div style={{...styles.modalContent, maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto'}}>
             <div style={styles.modalHeader}>
-              <h2 style={{...styles.modalTitle, color: '#111827'}}>Editar Veedor</h2>
+              <h2 style={styles.modalTitle}>Editar Veedor</h2>
               <button onClick={closeModal} style={styles.closeButton}><CloseIcon /></button>
             </div>
             <form onSubmit={handleEditSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -258,7 +306,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     container: { maxWidth: '95%', margin: '0 auto' },
     header: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem' },
     title: { fontSize: '2rem', color: '#111827', margin: 0, textAlign: 'center', fontWeight: 700 },
-    actionsContainer: { marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' },
+    toolbarContainer: { marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' },
+    searchFilterContainer: { display: 'flex', flexWrap: 'wrap', gap: '0.75rem' },
+    searchContainer: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', flex: 1, minWidth: '200px' },
+    searchInput: { border: 'none', outline: 'none', padding: '0', fontSize: '1rem', width: '100%', color: '#111827' },
+    actionsContainer: { display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexShrink: 0 },
     tableContainer: { overflowX: 'auto', border: '1px solid #E5E7EB', borderRadius: '0.75rem', backgroundColor: 'white', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' },
     table: { width: '100%', borderCollapse: 'collapse', whiteSpace: 'nowrap' },
     trHeader: { borderBottom: '1px solid #E5E7EB' },
