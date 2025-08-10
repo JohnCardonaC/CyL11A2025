@@ -1,0 +1,43 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model veedores {
+  id              Int      @id @default(autoincrement())
+  nodo            String?
+  departamento    String?
+  cod_ciudad      Int?     @map("Cod_Ciudad")
+  cod_cyl         Int?     @map("COD CYL")
+  ppal            String?
+  ciudad          String?
+  cod_sitio       String?  @map("Cod_Sitio")
+  fecha_aplica    DateTime? @map("Fecha aplica")
+  hora            String?
+  sitio           String?
+  direccion       String?
+  barrio          String?
+  salones         Int?
+  citados_10      Int?     @map("CITADOS 10")
+  contrato        String?
+  capacita        String?
+  nombres         String?
+  apellidos       String?
+  cedula          String?  @unique
+  celular         String?
+  correo          String?
+  banco           String?
+  tipo_cuenta     String?  @map("Tipo Cuenta")
+  no_cuenta       String?  @map("No. Cuenta")
+  createdAt       DateTime @default(now())
+
+  @@map("veedores")
+}
