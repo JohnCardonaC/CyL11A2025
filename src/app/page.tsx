@@ -15,44 +15,12 @@ const TrashIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="16" hei
 const CloseIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> );
 const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>);
 const SaveIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>);
-const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6B7280' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> );
-const ColumnsIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4B5563' }}><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg> );
+const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6B7280' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
 
 
 // Interfaces
-interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; }
+interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; }
 type RawVeedorData = { [key: string]: string | number; };
-
-// Definición de todas las columnas de la tabla
-const allColumns = [
-  { key: 'nodo', label: 'NODO' },
-  { key: 'departamento', label: 'DEPARTAMENTO' },
-  { key: 'Cod_Ciudad', label: 'Cod_Ciudad' },
-  { key: 'COD CYL', label: 'COD CYL' },
-  { key: 'ppal', label: 'Ppal' },
-  { key: 'ciudad', label: 'Ciudad' },
-  { key: 'Cod_Sitio', label: 'Cod_Sitio' },
-  { key: 'Fecha aplica', label: 'Fecha aplica' },
-  { key: 'hora', label: 'Hora' },
-  { key: 'sitio', label: 'Sitio' },
-  { key: 'direccion', label: 'Direccion' },
-  { key: 'barrio', label: 'Barrio' },
-  { key: 'salones', label: 'SALONES' },
-  { key: 'CITADOS 10', label: 'CITADOS 10' },
-  { key: 'contrato', label: 'Contrato' },
-  { key: 'capacita', label: 'CAPACITA' },
-  { key: 'nombres', label: 'Nombres' },
-  { key: 'apellidos', label: 'Apellidos' },
-  { key: 'cedula', label: 'Cedula' },
-  { key: 'celular', label: 'Celular' },
-  { key: 'correo', label: 'Correo' },
-  { key: 'banco', label: 'Banco' },
-  { key: 'Tipo Cuenta', label: 'Tipo Cuenta' },
-  { key: 'No. Cuenta', label: 'No. Cuenta' },
-  { key: 'A', label: 'A' },
-  { key: 'B', label: 'B' },
-  { key: 'C', label: 'C' },
-];
 
 
 // ====================================================================
@@ -128,11 +96,6 @@ export default function VeedoresPage() {
   const [hoveredRowId, setHoveredRowId] = useState<number | null>(null);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
-  // Estado para el control de columnas
-  const initialVisibleColumns = allColumns.map(col => col.key);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(initialVisibleColumns);
-  const [isColumnsDropdownOpen, setIsColumnsDropdownOpen] = useState(false);
-
   // Estado para los filtros
   const [searchCodSitio, setSearchCodSitio] = useState<string>('');
   const [searchCiudad, setSearchCiudad] = useState<string>('');
@@ -140,6 +103,9 @@ export default function VeedoresPage() {
   const [searchCodCiudad, setSearchCodCiudad] = useState<string>('');
   const [searchSitio, setSearchSitio] = useState<string>('');
   
+  // No necesitamos el estado 'filteredVeedores' ya que el filtro se hace en el servidor.
+  // const [filteredVeedores, setFilteredVeedores] = useState<Veedor[]>([]);
+
   // Estado para el modal de edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVeedor, setEditingVeedor] = useState<Partial<Veedor> | null>(null);
@@ -191,6 +157,13 @@ export default function VeedoresPage() {
 
   // UseEffect para el filtrado dinámico en el servidor
   useEffect(() => {
+    // Si no hay términos de búsqueda, muestra todos los veedores
+    if (!searchCodSitio && !searchCiudad && !searchDepartamento && !searchCodCiudad && !searchSitio) {
+      obtenerVeedores();
+      return;
+    }
+
+    // Llama a la API con los filtros
     const delayDebounceFn = setTimeout(() => {
       obtenerVeedores({
         codSitio: searchCodSitio,
@@ -277,36 +250,6 @@ export default function VeedoresPage() {
 
   const closeModal = () => { setIsEditModalOpen(false); setEditingVeedor(null); setEditFeedback(''); };
 
-  // Manejador para el checkbox de columnas
-  const handleColumnToggle = (columnKey: string) => {
-    setVisibleColumns(prev =>
-      prev.includes(columnKey)
-        ? prev.filter(key => key !== columnKey)
-        : [...prev, columnKey]
-    );
-  };
-  
-  // Manejador para los checkboxes de las columnas A, B, C
-  const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
-    setLoading(true);
-    const { error } = await supabase
-      .from('veedores')
-      .update({ [key]: value })
-      .eq('id', id);
-
-    if (error) {
-      setError(`Error al actualizar el campo ${key}: ${error.message}`);
-    } else {
-      // Actualizar el estado local para reflejar el cambio inmediatamente
-      setVeedores(prevVeedores =>
-        prevVeedores.map(veedor =>
-          veedor.id === id ? { ...veedor, [key]: value } : veedor
-        )
-      );
-    }
-    setLoading(false);
-  };
-
 
   return (
     <main style={styles.main}>
@@ -339,26 +282,6 @@ export default function VeedoresPage() {
             </div>
           </div>
           <div style={styles.actionsContainer}>
-            <div style={styles.columnsDropdownContainer}>
-              <button onClick={() => setIsColumnsDropdownOpen(!isColumnsDropdownOpen)} style={styles.columnsDropdownButton}>
-                <ColumnsIcon />
-                Columnas
-              </button>
-              {isColumnsDropdownOpen && (
-                <div style={styles.columnsDropdownMenu}>
-                  {allColumns.map(col => (
-                    <label key={col.key} style={styles.columnsDropdownItem}>
-                      <input
-                        type="checkbox"
-                        checked={visibleColumns.includes(col.key)}
-                        onChange={() => handleColumnToggle(col.key)}
-                      />
-                      {col.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
             <ImportButton onImportSuccess={obtenerVeedores} />
             <button onClick={handleDeleteSelected} disabled={selectedRows.length === 0} style={selectedRows.length > 0 ? styles.deleteButton : { ...styles.deleteButton, ...styles.deleteButtonDisabled }}>
               <TrashIcon />
@@ -375,10 +298,7 @@ export default function VeedoresPage() {
                 <tr style={styles.trHeader}>
                   <th style={styles.th}><input type="checkbox" checked={veedores.length > 0 && selectedRows.length === veedores.length} onChange={handleSelectAll} style={{ cursor: 'pointer' }} /></th>
                   <th style={styles.th}>No.</th>
-                  {visibleColumns.map(key => {
-                    const column = allColumns.find(col => col.key === key);
-                    return <th key={key} style={styles.th}>{column?.label}</th>;
-                  })}
+                  <th style={styles.th}>NODO</th><th style={styles.th}>DEPARTAMENTO</th><th style={styles.th}>Cod_Ciudad</th><th style={styles.th}>COD CYL</th><th style={styles.th}>Ppal</th><th style={styles.th}>Ciudad</th><th style={styles.th}>Cod_Sitio</th><th style={styles.th}>Fecha aplica</th><th style={styles.th}>Hora</th><th style={styles.th}>Sitio</th><th style={styles.th}>Direccion</th><th style={styles.th}>Barrio</th><th style={styles.th}>SALONES</th><th style={styles.th}>CITADOS 10</th><th style={styles.th}>Contrato</th><th style={styles.th}>CAPACITA</th><th style={styles.th}>Nombres</th><th style={styles.th}>Apellidos</th><th style={styles.th}>Cedula</th><th style={styles.th}>Celular</th><th style={styles.th}>Correo</th><th style={styles.th}>Banco</th><th style={styles.th}>Tipo Cuenta</th><th style={styles.th}>No. Cuenta</th>
                   <th style={styles.th}>Acciones</th>
                 </tr>
               </thead>
@@ -387,23 +307,7 @@ export default function VeedoresPage() {
                   <tr key={veedor.id} style={{ ...styles.tr, backgroundColor: selectedRows.includes(veedor.id) ? '#E0E7FF' : (hoveredRowId === veedor.id ? '#F9FAFB' : 'transparent') }} onMouseEnter={() => setHoveredRowId(veedor.id)} onMouseLeave={() => setHoveredRowId(null)}>
                     <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
                     <td style={styles.td}>{index + 1}</td>
-                    {visibleColumns.map(key => {
-                        // Lógica especial para las columnas A, B y C
-                        if (['A', 'B', 'C'].includes(key)) {
-                          return (
-                            <td key={key} style={{...styles.td, textAlign: 'center'}}>
-                                <input
-                                  type="checkbox"
-                                  checked={veedor[key as keyof Veedor] as boolean}
-                                  onChange={(e) => handleCheckboxChange(veedor.id, key as keyof Veedor, e.target.checked)}
-                                  disabled={loading}
-                                />
-                            </td>
-                          );
-                        }
-                        // Lógica para las demás columnas
-                        return <td key={key} style={styles.td}>{veedor[key as keyof Veedor] || '-'}</td>;
-                    })}
+                    <td style={styles.td}>{veedor.nodo || '-'}</td><td style={styles.td}>{veedor.departamento || '-'}</td><td style={styles.td}>{veedor['Cod_Ciudad'] || '-'}</td><td style={styles.td}>{veedor['COD CYL'] || '-'}</td><td style={styles.td}>{veedor.ppal || '-'}</td><td style={styles.td}>{veedor.ciudad || '-'}</td><td style={styles.td}>{veedor['Cod_Sitio'] || '-'}</td><td style={styles.td}>{formatDisplayDate(veedor['Fecha aplica'])}</td><td style={styles.td}>{veedor.hora || '-'}</td><td style={styles.td}>{veedor.sitio || '-'}</td><td style={styles.td}>{veedor.direccion || '-'}</td><td style={styles.td}>{veedor.barrio || '-'}</td><td style={styles.td}>{veedor.salones || '-'}</td><td style={styles.td}>{veedor['CITADOS 10'] || '-'}</td><td style={styles.td}>{veedor.contrato || '-'}</td><td style={styles.td}>{veedor.capacita || '-'}</td><td style={styles.td}>{veedor.nombres || '-'}</td><td style={styles.td}>{veedor.apellidos || '-'}</td><td style={styles.td}>{veedor.cedula || '-'}</td><td style={styles.td}>{veedor.celular || '-'}</td><td style={styles.td}>{veedor.correo || '-'}</td><td style={styles.td}>{veedor.banco || '-'}</td><td style={styles.td}>{veedor['Tipo Cuenta'] || '-'}</td><td style={styles.td}>{veedor['No. Cuenta'] || '-'}</td>
                     <td style={styles.td}>
                       <div style={styles.actionsCell}>
                         <button onClick={() => handleEditRow(veedor)} style={styles.actionButton}>
@@ -483,25 +387,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     deleteButtonDisabled: { backgroundColor: '#9CA3AF', cursor: 'not-allowed', opacity: 0.6 },
     importButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #3B82F6', borderRadius: '0.375rem', backgroundColor: 'white', color: '#3B82F6', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s' },
 
-    // -- INICIO DE NUEVOS ESTILOS PARA DROPDOWN Y MODAL --
-    columnsDropdownContainer: { position: 'relative', display: 'inline-block' },
-    columnsDropdownButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', color: '#4B5563', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s', },
-    columnsDropdownMenu: { position: 'absolute', right: 0, top: '100%', marginTop: '0.5rem', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', zIndex: 50, padding: '0.5rem' },
-    columnsDropdownItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', cursor: 'pointer', color: '#111827' },
-    // -- FIN DE ESTILOS --
-
-    // -- INICIO DE ESTILOS EXISTENTES (modal y acciones de fila) --
+    // -- INICIO DE CAMBIOS DE ESTILO EN EL MODAL --
     modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(17, 24, 39, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
     modalContent: { backgroundColor: 'white', padding: '2rem', borderRadius: '0.75rem', width: '90%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
     modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
-    modalTitle: { color: '#111827', margin: 0 },
-    modalSubtext: { color: '#374151', marginTop: 0, marginBottom: '1.5rem' },
+    modalTitle: { color: '#111827', margin: 0 }, // Título del modal en negro
+    modalSubtext: { color: '#374151', marginTop: 0, marginBottom: '1.5rem' }, // Subtexto en gris oscuro
     closeButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', color: '#6B7280' },
-    dropzone: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', border: '2px dashed #D1D5DB', borderRadius: '0.5rem', backgroundColor: '#F9FAFB', textAlign: 'center', color: '#374151', cursor: 'pointer', transition: 'border-color 0.2s' },
-    filePreview: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.5rem', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', color: '#111827' },
+    dropzone: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', border: '2px dashed #D1D5DB', borderRadius: '0.5rem', backgroundColor: '#F9FAFB', textAlign: 'center', color: '#374151', cursor: 'pointer', transition: 'border-color 0.2s' }, // Texto principal del dropzone en gris oscuro
+    filePreview: { display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', borderRadius: '0.5rem', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', color: '#111827' }, // Texto del archivo seleccionado en negro
     removeFileButton: { marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' },
-    cancelButton: { padding: '0.625rem 1.25rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', fontWeight: 500, color: '#374151' },
+    cancelButton: { padding: '0.625rem 1.25rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', fontWeight: 500, color: '#374151' }, // Texto del botón cancelar en gris oscuro
     confirmButton: { padding: '0.625rem 1.25rem', border: 'none', borderRadius: '0.375rem', backgroundColor: '#2563EB', color: 'white', cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.5rem' },
+    // -- FIN DE CAMBIOS --
+
+    // -- INICIO DE NUEVOS ESTILOS PARA ACCIONES DE FILA --
     actionsCell: { display: 'flex', gap: '0.5rem', justifyContent: 'center' },
     actionButton: { background: 'none', border: '1px solid #D1D5DB', padding: '0.5rem', borderRadius: '0.375rem', cursor: 'pointer', color: '#6B7280', transition: 'background-color 0.2s', },
     editInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', transition: 'border-color 0.2s', color: '#111827' },
