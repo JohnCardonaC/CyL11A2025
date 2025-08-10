@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabaseClient';
 import ImportButton from '../components/ImportButton';
@@ -17,6 +17,11 @@ const ColumnsIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" he
 const PlusIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>);
 const ChevronLeftIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>);
 const ChevronRightIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
+const SortArrowIcon = ({ direction }: { direction: 'asc' | 'desc' | 'none' }) => {
+  if (direction === 'asc') return (<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>);
+  if (direction === 'desc') return (<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>);
+  return null;
+};
 
 // Interfaces
 interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; D: boolean | null; E: boolean | null; F: boolean | null; }
@@ -98,6 +103,46 @@ export default function VeedoresPage() {
   const [newVeedor, setNewVeedor] = useState<Partial<Veedor>>({});
   const [addFeedback, setAddFeedback] = useState('');
 
+  // Estado para el ordenamiento
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Veedor, direction: 'asc' | 'desc' | 'none' } | null>(null);
+
+  // Estado y Ref para el redimensionamiento de columnas
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const isResizing = useRef(false);
+  const initialX = useRef(0);
+  const resizableKey = useRef<string | null>(null);
+
+  // Define las funciones de redimensionamiento
+  const resizeColumn = useCallback((e: MouseEvent) => {
+    if (isResizing.current && resizableKey.current) {
+      const dx = e.clientX - initialX.current;
+      setColumnWidths(prev => {
+        const currentWidth = prev[resizableKey.current!] || 150;
+        return {
+          ...prev,
+          [resizableKey.current!]: Math.max(100, currentWidth + dx),
+        };
+      });
+      initialX.current = e.clientX;
+    }
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizing.current = false;
+    resizableKey.current = null;
+    document.removeEventListener('mousemove', resizeColumn);
+    document.removeEventListener('mouseup', stopResizing);
+  }, [resizeColumn]);
+
+  const startResizing = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>, key: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    isResizing.current = true;
+    initialX.current = e.clientX;
+    resizableKey.current = key;
+    document.addEventListener('mousemove', resizeColumn);
+    document.addEventListener('mouseup', stopResizing);
+  }, [resizeColumn, stopResizing]);
 
   // Función para obtener veedores con filtros y paginación
   const obtenerVeedores = async (
@@ -114,7 +159,9 @@ export default function VeedoresPage() {
       E?: boolean;
       F?: boolean;
     } = {},
-    page: number = 0
+    page: number = 0,
+    pageSize: number = itemsPerPage,
+    sort: typeof sortConfig = sortConfig
   ) => {
     setLoading(true);
     setError(null);
@@ -155,13 +202,17 @@ export default function VeedoresPage() {
       query = query.eq('F', true);
     }
 
-    if (itemsPerPage !== -1) {
-      const from = page * itemsPerPage;
-      const to = from + itemsPerPage - 1;
+    if (sort) {
+      query = query.order(sort.key as string, { ascending: sort.direction === 'asc' });
+    } else {
+      query = query.order('id', { ascending: true });
+    }
+
+    if (pageSize !== -1) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
       query = query.range(from, to);
     }
-    
-    query = query.order('id', { ascending: true });
 
     const { data, error, count } = await query;
     if (error) {
@@ -169,21 +220,15 @@ export default function VeedoresPage() {
     } else {
       setVeedores(data as Veedor[]);
       setTotalRecords(count);
-      setHasMorePages(data.length === itemsPerPage);
+      setHasMorePages(data.length === pageSize);
     }
     setLoading(false);
   };
   
-  // Llama a la función de obtención de datos al cargar la página
-  useEffect(() => {
-    obtenerVeedores({}, currentPage);
-  }, [currentPage, itemsPerPage]);
-
-  // UseEffect para el filtrado dinámico en el servidor
+  // Unifica las llamadas a la API en un solo useEffect
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      setCurrentPage(0); // Reiniciar la página al aplicar un filtro
-      obtenerVeedores({
+      const filters = {
         codSitio: searchCodSitio,
         ciudad: searchCiudad,
         departamento: searchDepartamento,
@@ -195,12 +240,15 @@ export default function VeedoresPage() {
         D: filterD,
         E: filterE,
         F: filterF,
-      }, 0);
-    }, 500); // Debounce de 500ms para evitar múltiples llamadas a la API al escribir
+      };
+      obtenerVeedores(filters, currentPage, itemsPerPage, sortConfig);
+    }, 500); // Debounce de 500ms
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, filterA, filterB, filterC, filterD, filterE, filterF]);
+  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, filterA, filterB, filterC, filterD, filterE, filterF, currentPage, itemsPerPage, sortConfig]);
 
+  // Eliminar los useEffect redundantes para paginación y ordenamiento.
+  // El useEffect que maneja los filtros ya cubre estos casos.
 
   const handleSelectRow = (id: number) => { setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]); };
   const handleSelectAll = () => { setSelectedRows(selectedRows.length === veedores.length ? [] : veedores.map(v => v.id)); };
@@ -352,7 +400,7 @@ export default function VeedoresPage() {
       setCurrentPage(prev => prev - 1);
     }
   };
-
+  
   const isAnyFilterActive = searchCodSitio || searchCiudad || searchDepartamento || searchCodCiudad || searchSitio || filterA || filterB || filterC || filterD || filterE || filterF;
   const showPagination = !isAnyFilterActive && itemsPerPage !== -1;
 
@@ -367,17 +415,6 @@ export default function VeedoresPage() {
   };
   const setBooleanFilterStates = {
     A: setFilterA, B: setFilterB, C: setFilterC, D: setFilterD, E: setFilterE, F: setFilterF
-  };
-  const getLabelForBooleanFilter = (key: string) => {
-    switch (key) {
-      case 'A': return 'Llegada sitio Mañana';
-      case 'B': return 'Entrega material mañana';
-      case 'C': return 'Finalizó mañana';
-      case 'D': return 'Llegada sitio tarde';
-      case 'E': return 'Entrega material tarde';
-      case 'F': return 'Finalizó tarde';
-      default: return '';
-    }
   };
 
   return (
@@ -410,12 +447,15 @@ export default function VeedoresPage() {
               <input type="text" placeholder="Buscar por Cod_Ciudad..." value={searchCodCiudad} onChange={(e) => setSearchCodCiudad(e.target.value)} style={styles.searchInput} />
             </div>
             <div style={styles.filterCheckboxContainer}>
-              {booleanColumns.map(key => (
-                <label key={key} style={styles.filterCheckboxLabel}>
-                  <input type="checkbox" checked={booleanFilterStates[key as keyof typeof booleanFilterStates]} onChange={(e) => setBooleanFilterStates[key as keyof typeof booleanFilterStates](e.target.checked)} />
-                  {getLabelForBooleanFilter(key)}
-                </label>
-              ))}
+              {booleanColumns.map(key => {
+                const column = allColumns.find(col => col.key === key);
+                return (
+                  <label key={key} style={styles.filterCheckboxLabel}>
+                    <input type="checkbox" checked={booleanFilterStates[key as keyof typeof booleanFilterStates]} onChange={(e) => setBooleanFilterStates[key as keyof typeof booleanFilterStates](e.target.checked)} />
+                    {column?.label}
+                  </label>
+                );
+              })}
             </div>
           </div>
           <div style={styles.actionsContainer}>
@@ -472,25 +512,38 @@ export default function VeedoresPage() {
               <table style={styles.table}>
                 <thead>
                   <tr style={styles.trHeader}>
-                    <th style={styles.th}><input type="checkbox" checked={veedores.length > 0 && selectedRows.length === veedores.length} onChange={handleSelectAll} style={{ cursor: 'pointer' }} /></th>
-                    <th style={styles.th}>No.</th>
+                    <th style={{...styles.th, minWidth: '40px'}}><input type="checkbox" checked={veedores.length > 0 && selectedRows.length === veedores.length} onChange={handleSelectAll} style={{ cursor: 'pointer' }} /></th>
+                    <th style={{...styles.th, cursor: 'pointer', position: 'relative', minWidth: '60px', width: columnWidths['id'] || 'auto'}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#4B5563'}}>
+                        No.
+                      </div>
+                      <div onMouseDown={(e) => startResizing(e, 'id')} style={styles.resizer} />
+                    </th>
                     {visibleColumns.map(key => {
                       const column = allColumns.find(col => col.key === key);
-                      return <th key={key} style={styles.th}>{column?.label}</th>;
+                      if (!column) return null;
+                      return (
+                        <th key={key} style={{...styles.th, cursor: 'pointer', position: 'relative', width: columnWidths[key] || 'auto', minWidth: '100px'}}>
+                          <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', color: '#4B5563'}}>
+                            <span>{column.label}</span>
+                          </div>
+                          <div onMouseDown={(e) => startResizing(e, key)} style={styles.resizer} />
+                        </th>
+                      );
                     })}
-                    <th style={styles.th}>Acciones</th>
+                    <th style={{...styles.th, minWidth: '100px'}}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {veedores.map((veedor, index) => (
                     <tr key={veedor.id} style={{ ...styles.tr, backgroundColor: selectedRows.includes(veedor.id) ? '#E0E7FF' : (hoveredRowId === veedor.id ? '#F9FAFB' : 'transparent') }} onMouseEnter={() => setHoveredRowId(veedor.id)} onMouseLeave={() => setHoveredRowId(null)}>
-                      <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
-                      <td style={styles.td}>{itemsPerPage === -1 ? (index + 1) : (currentPage * itemsPerPage + index + 1)}</td>
+                      <td style={{...styles.td, minWidth: '40px'}}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
+                      <td style={{...styles.td, width: columnWidths['id'] || 'auto', minWidth: '60px'}}>{itemsPerPage === -1 ? (index + 1) : (currentPage * itemsPerPage + index + 1)}</td>
                       {visibleColumns.map(key => {
                           // Lógica especial para las columnas booleanas
                           if (booleanColumns.includes(key)) {
                             return (
-                              <td key={key} style={{...styles.td, textAlign: 'center'}}>
+                              <td key={key} style={{...styles.td, textAlign: 'center', width: columnWidths[key] || 'auto'}}>
                                   <input
                                     type="checkbox"
                                     checked={veedor[key as keyof Veedor] as boolean}
@@ -501,9 +554,9 @@ export default function VeedoresPage() {
                             );
                           }
                           // Lógica para las demás columnas
-                          return <td key={key} style={styles.td}>{veedor[key as keyof Veedor] || '-'}</td>;
+                          return <td key={key} style={{...styles.td, width: columnWidths[key] || 'auto'}}>{veedor[key as keyof Veedor] || '-'}</td>;
                       })}
-                      <td style={styles.td}>
+                      <td style={{...styles.td, minWidth: '100px'}}>
                         <div style={styles.actionsCell}>
                           <button onClick={() => handleEditRow(veedor)} style={styles.actionButton}>
                             <EditIcon />
@@ -655,10 +708,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     searchInput: { border: 'none', outline: 'none', padding: '0', fontSize: '1rem', width: '100%', color: '#111827' },
     actionsContainer: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', flexShrink: 0 },
     tableContainer: { overflowX: 'auto', border: '1px solid #E5E7EB', borderRadius: '0.75rem', backgroundColor: 'white', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' },
-    table: { width: '100%', borderCollapse: 'collapse' },
+    table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }, // Cambio a 'auto' para redimensionar
     trHeader: { borderBottom: '1px solid #E5E7EB' },
-    th: { padding: '0.75rem 0.5rem', textAlign: 'left', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', fontSize: '0.75rem', minWidth: '100px', whiteSpace: 'normal', verticalAlign: 'bottom' },
-    td: { padding: '0.75rem 0.5rem', borderTop: '1px solid #E5E7EB', color: '#374151', fontSize: '0.875rem', minWidth: '100px' },
+    th: { padding: '0.75rem 0.5rem', textAlign: 'left', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', fontSize: '0.75rem', whiteSpace: 'normal', verticalAlign: 'bottom', position: 'relative' },
+    td: { padding: '0.75rem 0.5rem', borderTop: '1px solid #E5E7EB', color: '#374151', fontSize: '0.875rem' },
     tr: { transition: 'background-color 0.2s ease-in-out' },
     deleteButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s, opacity 0.2s', },
     deleteButtonDisabled: { backgroundColor: '#9CA3AF', cursor: 'not-allowed', opacity: 0.6 },
@@ -692,4 +745,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     actionsCell: { display: 'flex', gap: '0.5rem', justifyContent: 'center' },
     actionButton: { background: 'none', border: '1px solid #D1D5DB', padding: '0.5rem', borderRadius: '0.375rem', cursor: 'pointer', color: '#6B7280', transition: 'background-color 0.2s', },
     editInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', transition: 'border-color 0.2s', color: '#111827' },
+    resizer: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '5px', cursor: 'col-resize', transition: 'background-color 0.2s', zIndex: 10 },
 };
