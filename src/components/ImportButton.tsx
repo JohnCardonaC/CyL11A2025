@@ -5,6 +5,10 @@ import { supabase } from '../lib/supabaseClient'; // RUTA CORREGIDA Y DEFINITIVA
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
+// Interfaces
+interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; }
+type RawVeedorData = { [key: string]: string | number; };
+
 export default function ImportButton({ onImportSuccess }: { onImportSuccess: () => void }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -55,19 +59,23 @@ export default function ImportButton({ onImportSuccess }: { onImportSuccess: () 
     }
   };
 
-  const parseFile = (file: File): Promise<any[]> => {
+  const parseFile = (file: File): Promise<RawVeedorData[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       if (file.name.endsWith('.csv')) {
-        Papa.parse(file, { header: true, skipEmptyLines: true, complete: (result) => resolve(result.data), error: (err) => reject(err) });
+        Papa.parse(file, { header: true, skipEmptyLines: true, complete: (result) => resolve(result.data as RawVeedorData[]), error: (err) => reject(err) });
       } else if (file.name.endsWith('.xlsx')) {
         reader.onload = (e) => {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(worksheet);
-            resolve(json);
+            try {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+                resolve(json as RawVeedorData[]);
+            } catch (err) {
+                reject(err);
+            }
         };
         reader.onerror = reject;
         reader.readAsArrayBuffer(file);
@@ -77,7 +85,7 @@ export default function ImportButton({ onImportSuccess }: { onImportSuccess: () 
     });
   };
 
-  const mapDataToSchema = (data: any[]): any[] => {
+  const mapDataToSchema = (data: RawVeedorData[]): Partial<Veedor>[] => {
     return data.map(row => ({
       nodo: row.NODO, departamento: row.DEPARTAMENTO, Cod_Ciudad: row['Cod_Ciudad'], "COD CYL": row['COD CYL'], ppal: row.Ppal, ciudad: row.Ciudad, "Cod_Sitio": row['Cod_Sitio'], "Fecha aplica": row['Fecha aplica'], hora: row.Hora, sitio: row.Sitio, direccion: row.Direccion, barrio: row.Barrio, salones: row.SALONES, "CITADOS 10": row['CITADOS 10'], contrato: row.Contrato, capacita: row.CAPACITA, nombres: row.Nombres, apellidos: row.Apellidos, cedula: row.Cedula, celular: row.Celular, correo: row.Correo, banco: row.Banco, "Tipo Cuenta": row['Tipo Cuenta'], "No. Cuenta": row['No. Cuenta'],
     }));
