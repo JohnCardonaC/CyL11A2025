@@ -24,7 +24,42 @@ const SortArrowIcon = ({ direction }: { direction: 'asc' | 'desc' | 'none' }) =>
 };
 
 // Interfaces
-interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; D: boolean | null; E: boolean | null; F: boolean | null; OBSERVACIONES: string | null; }
+interface Veedor { 
+  id: number; 
+  nodo: string | null; 
+  departamento: string | null; 
+  "Cod_Ciudad": number | null; 
+  "COD CYL": number | null; 
+  ppal: string | null; 
+  ciudad: string | null; 
+  "Cod_Sitio": string | null; 
+  "Fecha aplica": string | null; 
+  hora: string | null; 
+  sitio: string | null; 
+  direccion: string | null; 
+  barrio: string | null; 
+  salones: number | null; 
+  "CITADOS 10": number | null; 
+  contrato: string | null; 
+  capacita: string | null; 
+  nombres: string | null; 
+  apellidos: string | null; 
+  cedula: string | null; 
+  celular: string | null; 
+  correo: string | null; 
+  banco: string | null; 
+  "Tipo Cuenta": string | null; 
+  "No. Cuenta": string | null; 
+  createdAt: string | null; 
+  A: boolean | null; 
+  B: boolean | null; 
+  C: boolean | null; 
+  D: boolean | null; 
+  E: boolean | null; 
+  F: boolean | null; 
+  OBSERVACIONES: string | null; 
+  "OBSERVACIONES_TARDE": string | null; // Nuevo campo
+}
 type RawVeedorData = { [key: string]: string | number; };
 
 // Definición de todas las columnas de la tabla
@@ -59,7 +94,8 @@ const allColumns = [
   { key: 'D', label: 'Llegada sitio tarde' },
   { key: 'E', label: 'Entrega material tarde' },
   { key: 'F', label: 'Finalizó tarde' },
-  { key: 'OBSERVACIONES', label: 'OBSERVACIONES' },
+  { key: 'OBSERVACIONES', label: 'Observaciones Mañana' }, // Nombre de columna actualizado
+  { key: 'OBSERVACIONES_TARDE', label: 'Observaciones Tarde' }, // Nueva columna
 ];
 
 const formatDisplayDate = (dateString: string | null | undefined) => { if (!dateString) return '-'; const date = new Date(dateString); return date.toLocaleDateString('es-CO', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }); };
@@ -338,8 +374,6 @@ export default function VeedoresPage() {
   
   // Unifica las llamadas a la API en un solo useEffect
   useEffect(() => {
-        console.log("useEffect se está ejecutando. currentPage:", currentPage);
-
     const delayDebounceFn = setTimeout(() => {
       const filters = {
         codSitio: searchCodSitio,
@@ -439,25 +473,6 @@ export default function VeedoresPage() {
     );
   };
   
-  // const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
-  //   setLoading(true);
-  //   const { error } = await supabase
-  //     .from('veedores')
-  //     .update({ [key]: value })
-  //     .eq('id', id);
-
-  //   if (error) {
-  //     setError(`Error al actualizar el campo ${key}: ${error.message}`);
-  //   } else {
-  //     setVeedores(prevVeedores =>
-  //       prevVeedores.map(veedor =>
-  //         veedor.id === id ? { ...veedor, [key]: value } : veedor
-  //       )
-  //     );
-  //   }
-  //   setLoading(false);
-  // };
-
 const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
     // Almacena la posición actual del scroll antes de la actualización del estado
     if (tableContainerRef.current) {
@@ -741,6 +756,7 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
               {allColumns.filter(col => !excludedColumns.includes(col.key) && col.key !== 'id' && col.key !== 'createdAt').map(col => {
                 const key = col.key as keyof Veedor;
                 const isBoolean = booleanColumns.includes(key);
+                const isTextArea = key === 'OBSERVACIONES' || key === 'OBSERVACIONES_TARDE';
                 return (
                   <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <label htmlFor={key} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{col.label}</label>
@@ -754,27 +770,25 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                         style={{ width: 'auto' }}
                         disabled={loading}
                       />
+                    ) : isTextArea ? (
+                      <textarea
+                        id={key}
+                        name={key}
+                        value={String(editingVeedor[key] || '')}
+                        onChange={handleEditChange}
+                        style={{...styles.editInput, height: '80px', resize: 'vertical'}}
+                        disabled={loading}
+                      />
                     ) : (
-                      key === 'OBSERVACIONES' ? (
-                        <textarea
-                          id={key}
-                          name={key}
-                          value={String(editingVeedor[key] || '')}
-                          onChange={handleEditChange}
-                          style={{...styles.editInput, height: '80px', resize: 'vertical'}}
-                          disabled={loading}
-                        />
-                      ) : (
-                        <input
-                          id={key}
-                          name={key}
-                          type="text"
-                          value={String(editingVeedor[key] || '')}
-                          onChange={handleEditChange}
-                          style={styles.editInput}
-                          disabled={loading}
-                        />
-                      )
+                      <input
+                        id={key}
+                        name={key}
+                        type="text"
+                        value={String(editingVeedor[key] || '')}
+                        onChange={handleEditChange}
+                        style={styles.editInput}
+                        disabled={loading}
+                      />
                     )}
                   </div>
                 );
@@ -803,6 +817,7 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
               {allColumns.filter(col => col.key !== 'id' && col.key !== 'createdAt').map(col => {
                 const key = col.key as keyof Veedor;
                 const isBoolean = booleanColumns.includes(key);
+                const isTextArea = key === 'OBSERVACIONES' || key === 'OBSERVACIONES_TARDE';
                 return (
                   <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <label htmlFor={key} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{col.label}</label>
@@ -816,27 +831,25 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                         style={{ width: 'auto' }}
                         disabled={loading}
                       />
+                    ) : isTextArea ? (
+                      <textarea
+                        id={key}
+                        name={key}
+                        value={String(newVeedor[key] || '')}
+                        onChange={handleNewVeedorChange}
+                        style={{...styles.editInput, height: '80px', resize: 'vertical'}}
+                        disabled={loading}
+                      />
                     ) : (
-                      key === 'OBSERVACIONES' ? (
-                        <textarea
-                          id={key}
-                          name={key}
-                          value={String(newVeedor[key] || '')}
-                          onChange={handleNewVeedorChange}
-                          style={{...styles.editInput, height: '80px', resize: 'vertical'}}
-                          disabled={loading}
-                        />
-                      ) : (
-                        <input
-                          id={key}
-                          name={key}
-                          type="text"
-                          value={String(newVeedor[key] || '')}
-                          onChange={handleNewVeedorChange}
-                          style={styles.editInput}
-                          disabled={loading}
-                        />
-                      )
+                      <input
+                        id={key}
+                        name={key}
+                        type="text"
+                        value={String(newVeedor[key] || '')}
+                        onChange={handleNewVeedorChange}
+                        style={styles.editInput}
+                        disabled={loading}
+                      />
                     )}
                   </div>
                 );
