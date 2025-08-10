@@ -51,9 +51,13 @@ export default function ImportButton({ onImportSuccess }: { onImportSuccess: () 
       onImportSuccess();
       setTimeout(() => closeModal(), 2000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setFeedback(`Error: ${error.message}`);
+      if (error instanceof Error) {
+        setFeedback(`Error: ${error.message}`);
+      } else {
+        setFeedback('Error desconocido durante la importación.');
+      }
     } finally {
       setIsProcessing(false);
     }
