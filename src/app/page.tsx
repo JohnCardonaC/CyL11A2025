@@ -143,6 +143,9 @@ export default function VeedoresPage() {
   const [filterD, setFilterD] = useState<boolean>(false);
   const [filterE, setFilterE] = useState<boolean>(false);
   const [filterF, setFilterF] = useState<boolean>(false);
+  // Nuevo estado para el filtro de fecha
+  const [searchFechaAplica, setSearchFechaAplica] = useState<string>('');
+  const [fechasAplicaOptions, setFechasAplicaOptions] = useState<string[]>([]);
 
   // Estado para la paginación
   const [currentPage, setCurrentPage] = useState(0);
@@ -305,6 +308,7 @@ export default function VeedoresPage() {
       D?: boolean;
       E?: boolean;
       F?: boolean;
+      fechaAplica?: string; // Nuevo filtro de fecha
     } = {},
     page: number = 0,
     pageSize: number = itemsPerPage,
@@ -329,6 +333,10 @@ export default function VeedoresPage() {
     }
     if (filters.sitio) {
       query = query.ilike('sitio', `%${filters.sitio}%`);
+    }
+    // Nuevo filtro por fecha de aplicación
+    if (filters.fechaAplica) {
+      query = query.eq('Fecha aplica', filters.fechaAplica);
     }
     if (filters.A) {
       query = query.eq('A', true);
@@ -372,6 +380,48 @@ export default function VeedoresPage() {
     setLoading(false);
   };
   
+// Nuevo useEffect para obtener y almacenar las fechas de aplicación únicas
+// Nuevo useEffect para obtener y almacenar las fechas de aplicación únicas
+useEffect(() => {
+  const fetchUniqueDates = async () => {
+    // 1. Obtener todos los valores de la columna "Fecha aplica"
+    // No usamos 'distinct' aquí para que el cliente pueda hacer el agrupamiento de forma robusta.
+    const { data, error } = await supabase
+      .from('veedores')
+      .select('"Fecha aplica"');
+
+    if (error) {
+      console.error("Error fetching unique dates:", error);
+      return;
+    }
+
+    if (data) {
+      // 2. Mapear los datos para limpiar y formatear la fecha
+      const allDates = data
+        .map(item => {
+          const dateString = item['Fecha aplica'];
+          // Nos aseguramos de que dateString no sea null, undefined, o un string vacío
+          if (dateString && typeof dateString === 'string') {
+            // Elimina espacios en blanco y toma solo la parte de la fecha (YYYY-MM-DD)
+            return dateString.trim().split('T')[0];
+          }
+          return null;
+        })
+        // 3. Filtrar cualquier valor nulo después de la limpieza
+        .filter(date => date !== null);
+
+      // 4. Usar un Set para obtener solo las fechas únicas
+      const uniqueDates = Array.from(new Set(allDates));
+
+      // 5. Ordenar las fechas para que aparezcan en orden cronológico
+      uniqueDates.sort();
+      
+      setFechasAplicaOptions(uniqueDates);
+    }
+  };
+  fetchUniqueDates();
+}, []);
+
   // Unifica las llamadas a la API en un solo useEffect
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -381,6 +431,7 @@ export default function VeedoresPage() {
         departamento: searchDepartamento,
         codCiudad: searchCodCiudad,
         sitio: searchSitio,
+        fechaAplica: searchFechaAplica, // Nuevo filtro de fecha
         A: filterA,
         B: filterB,
         C: filterC,
@@ -392,7 +443,7 @@ export default function VeedoresPage() {
     }, 500); // Debounce de 500ms
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, filterA, filterB, filterC, filterD, filterE, filterF, currentPage, itemsPerPage, sortConfig]);
+  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, searchFechaAplica, filterA, filterB, filterC, filterD, filterE, filterF, currentPage, itemsPerPage, sortConfig]);
 
   // Manejadores y demás lógica
   const handleSelectRow = (id: number) => { setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]); };
@@ -545,7 +596,7 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
     }
   };
   
-  const isAnyFilterActive = searchCodSitio || searchCiudad || searchDepartamento || searchCodCiudad || searchSitio || filterA || filterB || filterC || filterD || filterE || filterF;
+  const isAnyFilterActive = searchCodSitio || searchCiudad || searchDepartamento || searchCodCiudad || searchSitio || searchFechaAplica || filterA || filterB || filterC || filterD || filterE || filterF;
   const showPagination = !isAnyFilterActive && itemsPerPage !== -1;
 
   const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -589,6 +640,17 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
             <div style={styles.searchContainer}>
               <SearchIcon />
               <input type="text" placeholder="Buscar por Cod_Ciudad..." value={searchCodCiudad} onChange={(e) => setSearchCodCiudad(e.target.value)} style={styles.searchInput} />
+            </div>
+            {/* Nuevo filtro de fecha de aplicación */}
+            <div style={styles.searchContainer}>
+              <select value={searchFechaAplica} onChange={(e) => setSearchFechaAplica(e.target.value)} style={styles.selectInput}>
+                <option value="">Todas las fechas</option>
+                {fechasAplicaOptions.map(date => (
+                  <option key={date} value={date}>
+                    {formatDisplayDate(date)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div style={styles.filterCheckboxContainer}>
               {booleanColumns.map(key => {
@@ -921,7 +983,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     // -- ESTILOS DE DROPDOWN Y MODAL --
     columnsDropdownContainer: { position: 'relative', display: 'inline-block' },
     columnsDropdownButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', color: '#4B5563', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s', },
-    columnsDropdownMenu: { position: 'absolute', right: 0, top: '100%', marginTop: '0.5rem', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', zIndex: 50, padding: '0.5rem' },
+    columnsDropdownMenu: { position: 'absolute', right: 0, top: '100%', marginTop: '0.5rem', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1-px rgba(0, 0, 0, 0.06)', zIndex: 50, padding: '0.5rem' },
     columnsDropdownItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', cursor: 'pointer', color: '#111827' },
     modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(17, 24, 39, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
     modalContent: { backgroundColor: 'white', padding: '2rem', borderRadius: '0.75rem', width: '90%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
