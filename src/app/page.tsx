@@ -10,7 +10,7 @@ import ImportButton from '../components/ImportButton';
 // ====================================================================
 const TrashIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> );
 const CloseIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> );
-const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>);
+const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>);
 const SaveIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>);
 const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6B7280' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> );
 const ColumnsIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4B5563' }}><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg> );
@@ -380,7 +380,6 @@ export default function VeedoresPage() {
     setLoading(false);
   };
   
-// Nuevo useEffect para obtener y almacenar las fechas de aplicación únicas
 // Nuevo useEffect para obtener y almacenar las fechas de aplicación únicas
 useEffect(() => {
   const fetchUniqueDates = async () => {
@@ -756,26 +755,38 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                       <td style={{...styles.td, minWidth: '40px'}}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
                       <td style={{...styles.td, width: columnWidths['id'] || 'auto', minWidth: '60px'}}>{itemsPerPage === -1 ? (index + 1) : (currentPage * itemsPerPage + index + 1)}</td>
                       {visibleColumns.map(key => {
-                          // Lógica especial para las columnas booleanas
-                          if (booleanColumns.includes(key)) {
-                            return (
-                              <td key={key} style={{...styles.td, textAlign: 'center', width: columnWidths[key] || 'auto'}}>
-                                  <input
-                                    type="checkbox"
-                                    checked={veedor[key as keyof Veedor] as boolean}
-                                    onChange={(e) => handleCheckboxChange(veedor.id, key as keyof Veedor, e.target.checked)}
-                                    disabled={loading}
-                                  />
-                              </td>
-                            );
-                          }
-                          // Lógica para las demás columnas
-                          return <td key={key} style={{...styles.td, width: columnWidths[key] || 'auto'}}>{veedor[key as keyof Veedor] || '-'}</td>;
+                        const isBooleanColumn = booleanColumns.includes(key);
+                        const isObservacionesColumn = key === 'OBSERVACIONES' || key === 'OBSERVACIONES_TARDE';
+
+                        const cellStyle = {
+                          ...styles.td,
+                          width: columnWidths[key] || 'auto',
+                          ...(isObservacionesColumn ? styles.tdObservaciones : {}),
+                        };
+
+                        if (isBooleanColumn) {
+                          return (
+                            <td key={key} style={{...cellStyle, textAlign: 'center'}}>
+                              <input
+                                type="checkbox"
+                                checked={veedor[key as keyof Veedor] as boolean}
+                                onChange={(e) => handleCheckboxChange(veedor.id, key as keyof Veedor, e.target.checked)}
+                                disabled={loading}
+                              />
+                            </td>
+                          );
+                        }
+                        
+                        return (
+                          <td key={key} style={cellStyle}>
+                            {veedor[key as keyof Veedor] || '-'}
+                          </td>
+                        );
                       })}
                       <td style={{...styles.td, minWidth: '100px'}}>
                         <div style={styles.actionsCell}>
                           <button onClick={() => handleEditRow(veedor)} style={styles.actionButton}>
-                            <EditIcon />
+                            Editar
                           </button>
                           <button onClick={() => handleDeleteRow(veedor.id)} style={styles.actionButton}>
                             <TrashIcon />
@@ -964,6 +975,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     trHeader: { borderBottom: '1px solid #E5E7EB' },
     th: { padding: '0.75rem 0.5rem', textAlign: 'left', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', fontSize: '0.75rem', whiteSpace: 'normal', verticalAlign: 'bottom', position: 'relative' },
     td: { padding: '0.75rem 0.5rem', borderTop: '1px solid #E5E7EB', color: '#374151', fontSize: '0.875rem' },
+    tdObservaciones: {
+        width: '250px',
+        maxWidth: '250px',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+    },
     tr: { transition: 'background-color 0.2s ease-in-out' },
     deleteButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s, opacity 0.2s', },
     deleteButtonDisabled: { backgroundColor: '#9CA3AF', cursor: 'not-allowed', opacity: 0.6 },
