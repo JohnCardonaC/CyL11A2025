@@ -131,15 +131,52 @@ export default function VeedoresPage() {
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const scrollPositionRef = useRef({ left: 0, top: 0 });
-  const [scrollLeft, setScrollLeft] = useState(0);
+ 
 
 
  useEffect(() => {
-  // Sincroniza la posición horizontal del scroll
-  if (tableContainerRef.current) {
-    tableContainerRef.current.scrollLeft = scrollLeft;
-  }
-}, [scrollLeft, veedores, tableContainerRef]); // Dependencias: scrollLeft, veedores y la referencia
+    const tableContainer = tableContainerRef.current;
+    const topScroll = topScrollRef.current;
+    const table = tableRef.current;
+
+    if (!tableContainer || !topScroll || !table) return;
+
+    // Sincroniza el ancho del scroll superior
+    const setScrollWidth = () => {
+        const tableWidth = table.offsetWidth;
+        const topScrollContent = topScroll.querySelector('div');
+        if (topScrollContent) {
+            topScrollContent.style.width = `${tableWidth}px`;
+        }
+    };
+    setScrollWidth();
+    window.addEventListener('resize', setScrollWidth);
+
+    // Lógica para sincronizar el scroll
+    const syncScroll = (event) => {
+        if (event.target === tableContainer) {
+            topScroll.scrollLeft = tableContainer.scrollLeft;
+            scrollPositionRef.current.left = tableContainer.scrollLeft; // Guardar la posición
+        } else if (event.target === topScroll) {
+            tableContainer.scrollLeft = topScroll.scrollLeft;
+            scrollPositionRef.current.left = topScroll.scrollLeft; // Guardar la posición
+        }
+    };
+
+    tableContainer.addEventListener('scroll', syncScroll);
+    topScroll.addEventListener('scroll', syncScroll);
+
+    // Restaurar la posición del scroll al inicio
+    tableContainer.scrollLeft = scrollPositionRef.current.left;
+    topScroll.scrollLeft = scrollPositionRef.current.left;
+    tableContainer.scrollTop = scrollPositionRef.current.top;
+
+    return () => {
+        tableContainer.removeEventListener('scroll', syncScroll);
+        topScroll.removeEventListener('scroll', syncScroll);
+        window.removeEventListener('resize', setScrollWidth);
+    };
+}, [visibleColumns, veedores]); 
 
   // Sincroniza el scroll de ambos contenedores
   useEffect(() => {
@@ -421,11 +458,12 @@ export default function VeedoresPage() {
   //   setLoading(false);
   // };
 
-
-
 const handleCheckboxChange = async (id, key, value) => {
-    // Guarda la posición actual del scroll en el estado
-    setScrollLeft(tableContainerRef.current?.scrollLeft || 0);
+    // Almacena la posición actual del scroll antes de la actualización del estado
+    if (tableContainerRef.current) {
+        scrollPositionRef.current.left = tableContainerRef.current.scrollLeft;
+        scrollPositionRef.current.top = tableContainerRef.current.scrollTop;
+    }
 
     const { error } = await supabase
         .from('veedores')
@@ -435,7 +473,7 @@ const handleCheckboxChange = async (id, key, value) => {
     if (error) {
         setError(`Error al actualizar el campo ${key}: ${error.message}`);
     } else {
-        // Actualiza el estado local de veedores
+        // Actualizar el estado local de veedores
         setVeedores(prevVeedores =>
             prevVeedores.map(veedor =>
                 veedor.id === id ? { ...veedor, [key]: value } : veedor
