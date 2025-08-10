@@ -24,7 +24,7 @@ const SortArrowIcon = ({ direction }: { direction: 'asc' | 'desc' | 'none' }) =>
 };
 
 // Interfaces
-interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; D: boolean | null; E: boolean | null; F: boolean | null; }
+interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; D: boolean | null; E: boolean | null; F: boolean | null; observaciones: string | null; }
 type RawVeedorData = { [key: string]: string | number; };
 
 // Definición de todas las columnas de la tabla
@@ -59,6 +59,7 @@ const allColumns = [
   { key: 'D', label: 'Llegada sitio tarde' },
   { key: 'E', label: 'Entrega material tarde' },
   { key: 'F', label: 'Finalizó tarde' },
+  { key: 'observaciones', label: 'Observaciones' },
 ];
 
 const formatDisplayDate = (dateString: string | null | undefined) => { if (!dateString) return '-'; const date = new Date(dateString); return date.toLocaleDateString('es-CO', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }); };
@@ -71,7 +72,21 @@ export default function VeedoresPage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
   // Estado para el control de columnas
-  const initialVisibleColumns = allColumns.map(col => col.key);
+  const allColumnKeys = allColumns.map(col => col.key);
+  const excludedColumns = [
+    'nodo', 
+    'Cod_Ciudad', 
+    'COD CYL', 
+    'ppal', 
+    'Fecha aplica', 
+    'hora', 
+    'contrato', 
+    'celular', 
+    'banco', 
+    'Tipo Cuenta', 
+    'No. Cuenta'
+  ];
+  const initialVisibleColumns = allColumnKeys.filter(key => !excludedColumns.includes(key));
   const [visibleColumns, setVisibleColumns] = useState<string[]>(initialVisibleColumns);
   const [isColumnsDropdownOpen, setIsColumnsDropdownOpen] = useState(false);
 
@@ -106,13 +121,57 @@ export default function VeedoresPage() {
   // Estado para el ordenamiento
   const [sortConfig, setSortConfig] = useState<{ key: keyof Veedor, direction: 'asc' | 'desc' | 'none' } | null>(null);
 
+  // Refs para el scroll horizontal
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  // Sincroniza el scroll de ambos contenedores
+useEffect(() => {
+  const tableContainer = tableContainerRef.current;
+  const topScroll = topScrollRef.current;
+  const table = tableRef.current;
+  if (!tableContainer || !topScroll || !table) return;
+
+  // Asegura que el scroll superior tiene el mismo ancho que la tabla
+  const setScrollWidth = () => {
+    const tableWidth = table.offsetWidth;
+    const topScrollContent = topScroll.querySelector('div');
+    if (topScrollContent) {
+      topScrollContent.style.width = `${tableWidth}px`;
+    }
+  };
+
+  // Inicia el ancho del scroll superior
+  setScrollWidth();
+
+  // Escucha eventos de redimensionamiento para ajustar el ancho
+  window.addEventListener('resize', setScrollWidth);
+
+  const syncScroll = (event: Event) => {
+    if (event.target === tableContainer) {
+      topScroll.scrollLeft = tableContainer.scrollLeft;
+    } else if (event.target === topScroll) {
+      tableContainer.scrollLeft = topScroll.scrollLeft;
+    }
+  };
+
+  tableContainer.addEventListener('scroll', syncScroll);
+  topScroll.addEventListener('scroll', syncScroll);
+
+  return () => {
+    tableContainer.removeEventListener('scroll', syncScroll);
+    topScroll.removeEventListener('scroll', syncScroll);
+    window.removeEventListener('resize', setScrollWidth);
+  };
+}, [visibleColumns, veedores]); // Eliminamos columnWidths de las dependencias
+
   // Estado y Ref para el redimensionamiento de columnas
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const isResizing = useRef(false);
   const initialX = useRef(0);
   const resizableKey = useRef<string | null>(null);
 
-  // Define las funciones de redimensionamiento
   const resizeColumn = useCallback((e: MouseEvent) => {
     if (isResizing.current && resizableKey.current) {
       const dx = e.clientX - initialX.current;
@@ -247,9 +306,7 @@ export default function VeedoresPage() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, filterA, filterB, filterC, filterD, filterE, filterF, currentPage, itemsPerPage, sortConfig]);
 
-  // Eliminar los useEffect redundantes para paginación y ordenamiento.
-  // El useEffect que maneja los filtros ya cubre estos casos.
-
+  // Manejadores y demás lógica
   const handleSelectRow = (id: number) => { setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]); };
   const handleSelectAll = () => { setSelectedRows(selectedRows.length === veedores.length ? [] : veedores.map(v => v.id)); };
   
@@ -269,7 +326,6 @@ export default function VeedoresPage() {
     } 
   };
 
-  // Función para eliminar una fila individual
   const handleDeleteRow = async (id: number) => {
     const confirmDelete = window.confirm(`¿Estás seguro de que deseas eliminar este registro?`);
     if (confirmDelete) {
@@ -284,22 +340,18 @@ export default function VeedoresPage() {
     }
   };
 
-  // Función para el botón de editar
   const handleEditRow = (veedor: Veedor) => {
     setEditingVeedor(veedor);
     setIsEditModalOpen(true);
     setEditFeedback('');
   };
 
-  // Manejador de cambios en los campos del modal de edición
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    // Special handling for checkbox types
     const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     setEditingVeedor(prev => (prev ? { ...prev, [name]: newValue } : null));
   };
 
-  // Manejador del envío del formulario de edición
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingVeedor || !editingVeedor.id) return;
@@ -317,15 +369,14 @@ export default function VeedoresPage() {
       setError("Error al actualizar: " + error.message);
     } else {
       setEditFeedback('Registro actualizado con éxito!');
-      await obtenerVeedores(); // Recargar los datos
-      setTimeout(() => setIsEditModalOpen(false), 1500); // Cerrar modal después de un tiempo
+      await obtenerVeedores(); 
+      setTimeout(() => setIsEditModalOpen(false), 1500); 
     }
     setLoading(false);
   };
 
   const closeEditModal = () => { setIsEditModalOpen(false); setEditingVeedor(null); setEditFeedback(''); };
 
-  // Manejador para el checkbox de columnas
   const handleColumnToggle = (columnKey: string) => {
     setVisibleColumns(prev =>
       prev.includes(columnKey)
@@ -334,7 +385,6 @@ export default function VeedoresPage() {
     );
   };
   
-  // Manejador para los checkboxes de las columnas A, B, C, D, E, F
   const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
     setLoading(true);
     const { error } = await supabase
@@ -345,7 +395,6 @@ export default function VeedoresPage() {
     if (error) {
       setError(`Error al actualizar el campo ${key}: ${error.message}`);
     } else {
-      // Actualizar el estado local para reflejar el cambio inmediatamente
       setVeedores(prevVeedores =>
         prevVeedores.map(veedor =>
           veedor.id === id ? { ...veedor, [key]: value } : veedor
@@ -355,20 +404,22 @@ export default function VeedoresPage() {
     setLoading(false);
   };
 
-  // Lógica para el modal de agregar
   const handleAddModalOpen = () => {
     setIsAddModalOpen(true);
-    setNewVeedor({}); // Limpiar el formulario
+    setNewVeedor({});
     setAddFeedback('');
   };
+
   const closeAddModal = () => {
     setIsAddModalOpen(false);
   };
-  const handleNewVeedorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+
+  const handleNewVeedorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     setNewVeedor(prev => ({ ...prev, [name]: newValue }));
   };
+
   const handleAgregarSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -494,22 +545,11 @@ export default function VeedoresPage() {
         {error && <p style={{ color: 'red' }}>{error}</p>}
         {!loading && !error && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#4B5563' }}>
-              <span>Registros: {totalRecords}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>Registros por página:</span>
-                <select value={itemsPerPage} onChange={handleItemsPerPageChange} style={styles.selectInput}>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                  <option value="200">200</option>
-                  <option value="500">500</option>
-                  <option value="1000">1000</option>
-                  <option value="-1">Todos</option>
-                </select>
-              </div>
+            <div style={styles.topScrollContainer} ref={topScrollRef}>
+              <div style={{...styles.topScrollContent, width: tableRef.current ? `${tableRef.current.offsetWidth}px` : '100%'}}></div>
             </div>
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
+            <div style={styles.tableContainer} ref={tableContainerRef}>
+              <table style={styles.table} ref={tableRef}>
                 <thead>
                   <tr style={styles.trHeader}>
                     <th style={{...styles.th, minWidth: '40px'}}><input type="checkbox" checked={veedores.length > 0 && selectedRows.length === veedores.length} onChange={handleSelectAll} style={{ cursor: 'pointer' }} /></th>
@@ -597,7 +637,7 @@ export default function VeedoresPage() {
               <button onClick={closeEditModal} style={styles.closeButton}><CloseIcon /></button>
             </div>
             <form onSubmit={handleEditSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              {allColumns.filter(col => col.key !== 'id' && col.key !== 'createdAt').map(col => {
+              {allColumns.filter(col => !excludedColumns.includes(col.key) && col.key !== 'id' && col.key !== 'createdAt').map(col => {
                 const key = col.key as keyof Veedor;
                 const isBoolean = booleanColumns.includes(key);
                 return (
@@ -614,15 +654,26 @@ export default function VeedoresPage() {
                         disabled={loading}
                       />
                     ) : (
-                      <input
-                        id={key}
-                        name={key}
-                        type="text"
-                        value={String(editingVeedor[key] || '')}
-                        onChange={handleEditChange}
-                        style={styles.editInput}
-                        disabled={key === 'createdAt' || loading}
-                      />
+                      key === 'observaciones' ? (
+                        <textarea
+                          id={key}
+                          name={key}
+                          value={String(editingVeedor[key] || '')}
+                          onChange={handleEditChange}
+                          style={{...styles.editInput, height: '80px', resize: 'vertical'}}
+                          disabled={loading}
+                        />
+                      ) : (
+                        <input
+                          id={key}
+                          name={key}
+                          type="text"
+                          value={String(editingVeedor[key] || '')}
+                          onChange={handleEditChange}
+                          style={styles.editInput}
+                          disabled={loading}
+                        />
+                      )
                     )}
                   </div>
                 );
@@ -665,15 +716,26 @@ export default function VeedoresPage() {
                         disabled={loading}
                       />
                     ) : (
-                      <input
-                        id={key}
-                        name={key}
-                        type="text"
-                        value={String(newVeedor[key] || '')}
-                        onChange={handleNewVeedorChange}
-                        style={styles.editInput}
-                        disabled={loading}
-                      />
+                      key === 'observaciones' ? (
+                        <textarea
+                          id={key}
+                          name={key}
+                          value={String(newVeedor[key] || '')}
+                          onChange={handleNewVeedorChange}
+                          style={{...styles.editInput, height: '80px', resize: 'vertical'}}
+                          disabled={loading}
+                        />
+                      ) : (
+                        <input
+                          id={key}
+                          name={key}
+                          type="text"
+                          value={String(newVeedor[key] || '')}
+                          onChange={handleNewVeedorChange}
+                          style={styles.editInput}
+                          disabled={loading}
+                        />
+                      )
                     )}
                   </div>
                 );
@@ -707,8 +769,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     searchContainer: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', flex: 1, minWidth: '200px' },
     searchInput: { border: 'none', outline: 'none', padding: '0', fontSize: '1rem', width: '100%', color: '#111827' },
     actionsContainer: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', flexShrink: 0 },
+    topScrollContainer: {
+        width: '100%',
+        overflowX: 'auto',
+        height: '15px',
+    },
+    topScrollContent: {
+        width: '100%',
+        minWidth: 'max-content',
+        height: '1px',
+    },
     tableContainer: { overflowX: 'auto', border: '1px solid #E5E7EB', borderRadius: '0.75rem', backgroundColor: 'white', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' },
-    table: { width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }, // Cambio a 'auto' para redimensionar
+    table: { width: '100%', minWidth: 'max-content', borderCollapse: 'collapse', tableLayout: 'auto' },
     trHeader: { borderBottom: '1px solid #E5E7EB' },
     th: { padding: '0.75rem 0.5rem', textAlign: 'left', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', fontSize: '0.75rem', whiteSpace: 'normal', verticalAlign: 'bottom', position: 'relative' },
     td: { padding: '0.75rem 0.5rem', borderTop: '1px solid #E5E7EB', color: '#374151', fontSize: '0.875rem' },
@@ -745,5 +817,5 @@ const styles: { [key: string]: React.CSSProperties } = {
     actionsCell: { display: 'flex', gap: '0.5rem', justifyContent: 'center' },
     actionButton: { background: 'none', border: '1px solid #D1D5DB', padding: '0.5rem', borderRadius: '0.375rem', cursor: 'pointer', color: '#6B7280', transition: 'background-color 0.2s', },
     editInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', transition: 'border-color 0.2s', color: '#111827' },
-    resizer: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '5px', cursor: 'col-resize', transition: 'background-color 0.2s', zIndex: 10 },
+    resizer: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '5px', cursor: 'col-resize', transition: 'background-color 0.2s', zIndex: 10,  },
 };
