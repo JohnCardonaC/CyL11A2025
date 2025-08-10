@@ -668,6 +668,10 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
     setModalObservacionesData(null);
   };
 
+  // Estados para manejar el hover de los botones
+  const [isHoveredAddObs, setIsHoveredAddObs] = useState(false);
+  const [isHoveredVerMas, setIsHoveredVerMas] = useState(false);
+
 
   return (
     <main style={styles.main}>
@@ -846,10 +850,12 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <span style={{ flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{veedorValue}</span>
                                             <button
-                                                onClick={() => handleOpenObservacionesModal(veedor.id, key as 'OBSERVACIONES' | 'OBSERVACIONES_TARDE', veedorValue)}
-                                                style={styles.verMasLink}
+                                              onClick={() => handleOpenObservacionesModal(veedor.id, key as 'OBSERVACIONES' | 'OBSERVACIONES_TARDE', veedorValue)}
+                                              style={isHoveredVerMas ? {...styles.verMasLink, ...styles.hoverVerMasLink} : styles.verMasLink}
+                                              onMouseEnter={() => setIsHoveredVerMas(true)}
+                                              onMouseLeave={() => setIsHoveredVerMas(false)}
                                             >
-                                                Ver más
+                                              Ver más
                                             </button>
                                         </div>
                                     </td>
@@ -867,7 +873,9 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                                     <td key={key} style={cellStyle}>
                                         <button
                                             onClick={() => handleOpenObservacionesModal(veedor.id, key as 'OBSERVACIONES' | 'OBSERVACIONES_TARDE', '')}
-                                            style={styles.addObservacionButton}
+                                            style={isHoveredAddObs ? {...styles.addObservacionButton, ...styles.hoverAddObservacionButton} : styles.addObservacionButton}
+                                            onMouseEnter={() => setIsHoveredAddObs(true)}
+                                            onMouseLeave={() => setIsHoveredAddObs(false)}
                                         >
                                             Agregar Observación
                                         </button>
@@ -1051,6 +1059,26 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
               <textarea
                 value={modalObservacionesData.value}
                 onChange={handleObservacionesChange}
+                // Manejador de evento para el salto de línea
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    // Evita que el formulario se envíe con la tecla Enter
+                    e.preventDefault(); 
+                    const textarea = e.currentTarget;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    // Inserta un salto de línea en la posición del cursor
+                    const newText = textarea.value.substring(0, start) + '\n' + textarea.value.substring(end);
+                    // Actualiza el valor en el estado
+                    if (modalObservacionesData) {
+                        setModalObservacionesData({ ...modalObservacionesData, value: newText });
+                    }
+                    // Mueve el cursor después del salto de línea
+                    setTimeout(() => {
+                        textarea.selectionStart = textarea.selectionEnd = start + 1;
+                    }, 0);
+                  }
+                }}
                 style={{ ...styles.editInput, height: '150px', resize: 'vertical' }}
               />
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
@@ -1115,7 +1143,11 @@ const styles: { [key: string]: React.CSSProperties } = {
         background: 'none',
         border: 'none',
         padding: 0,
-        fontSize: '0.875rem'
+        fontSize: '0.875rem',
+        transition: 'color 0.2s'
+    },
+    hoverVerMasLink: {
+        color: '#1E40AF',
     },
     addObservacionButton: {
         backgroundColor: '#ECFDF5',
@@ -1128,9 +1160,9 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '0.875rem',
         whiteSpace: 'nowrap',
         transition: 'background-color 0.2s',
-        '&:hover': {
-            backgroundColor: '#D1FAE5'
-        }
+    },
+    hoverAddObservacionButton: {
+      backgroundColor: '#D1FAE5'
     },
     tr: { transition: 'background-color 0.2s ease-in-out' },
     deleteButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s, opacity 0.2s', },
