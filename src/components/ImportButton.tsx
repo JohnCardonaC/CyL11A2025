@@ -86,9 +86,38 @@ export default function ImportButton({ onImportSuccess }: { onImportSuccess: () 
   };
 
   const mapDataToSchema = (data: RawVeedorData[]): Partial<Veedor>[] => {
-    return data.map(row => ({
-      nodo: row.NODO, departamento: row.DEPARTAMENTO, Cod_Ciudad: row['Cod_Ciudad'], "COD CYL": row['COD CYL'], ppal: row.Ppal, ciudad: row.Ciudad, "Cod_Sitio": row['Cod_Sitio'], "Fecha aplica": row['Fecha aplica'], hora: row.Hora, sitio: row.Sitio, direccion: row.Direccion, barrio: row.Barrio, salones: row.SALONES, "CITADOS 10": row['CITADOS 10'], contrato: row.Contrato, capacita: row.CAPACITA, nombres: row.Nombres, apellidos: row.Apellidos, cedula: row.Cedula, celular: row.Celular, correo: row.Correo, banco: row.Banco, "Tipo Cuenta": row['Tipo Cuenta'], "No. Cuenta": row['No. Cuenta'],
-    }));
+    return data.map(row => {
+      let fechaAplica = row['Fecha aplica'];
+      if (typeof fechaAplica === 'number') {
+        fechaAplica = new Date((fechaAplica - 25569) * 86400 * 1000).toISOString().split('T')[0];
+      }
+      return {
+        nodo: row.NODO ? String(row.NODO) : null,
+        departamento: row.DEPARTAMENTO ? String(row.DEPARTAMENTO) : null,
+        Cod_Ciudad: row['Cod_Ciudad'] ? Number(row['Cod_Ciudad']) : null,
+        "COD CYL": row['COD CYL'] ? Number(row['COD CYL']) : null,
+        ppal: row.Ppal ? String(row.Ppal) : null,
+        ciudad: row.Ciudad ? String(row.Ciudad) : null,
+        "Cod_Sitio": row['Cod_Sitio'] ? String(row['Cod_Sitio']) : null,
+        "Fecha aplica": fechaAplica ? String(fechaAplica) : null,
+        hora: row.Hora ? String(row.Hora) : null,
+        sitio: row.Sitio ? String(row.Sitio) : null,
+        direccion: row.Direccion ? String(row.Direccion) : null,
+        barrio: row.Barrio ? String(row.Barrio) : null,
+        salones: row.SALONES ? Number(row.SALONES) : null,
+        "CITADOS 10": row['CITADOS 10'] ? Number(row['CITADOS 10']) : null,
+        contrato: row.Contrato ? String(row.Contrato) : null,
+        capacita: row.CAPACITA ? String(row.CAPACITA) : null,
+        nombres: row.Nombres ? String(row.Nombres) : null,
+        apellidos: row.Apellidos ? String(row.Apellidos) : null,
+        cedula: row.Cedula ? String(row.Cedula) : null,
+        celular: row.Celular ? String(row.Celular) : null,
+        correo: row.Correo ? String(row.Correo) : null,
+        banco: row.Banco ? String(row.Banco) : null,
+        "Tipo Cuenta": row['Tipo Cuenta'] ? String(row['Tipo Cuenta']) : null,
+        "No. Cuenta": row['No. Cuenta'] ? String(row['No. Cuenta']) : null,
+      };
+    });
   };
   
   const closeModal = () => {
