@@ -24,7 +24,7 @@ const SortArrowIcon = ({ direction }: { direction: 'asc' | 'desc' | 'none' }) =>
 };
 
 // Interfaces
-interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; D: boolean | null; E: boolean | null; F: boolean | null; observaciones: string | null; }
+interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; D: boolean | null; E: boolean | null; F: boolean | null; OBSERVACIONES: string | null; }
 type RawVeedorData = { [key: string]: string | number; };
 
 // Definición de todas las columnas de la tabla
@@ -59,7 +59,7 @@ const allColumns = [
   { key: 'D', label: 'Llegada sitio tarde' },
   { key: 'E', label: 'Entrega material tarde' },
   { key: 'F', label: 'Finalizó tarde' },
-  { key: 'observaciones', label: 'Observaciones' },
+  { key: 'OBSERVACIONES', label: 'OBSERVACIONES' },
 ];
 
 const formatDisplayDate = (dateString: string | null | undefined) => { if (!dateString) return '-'; const date = new Date(dateString); return date.toLocaleDateString('es-CO', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }); };
@@ -130,6 +130,13 @@ export default function VeedoresPage() {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
+  const scrollPositionRef = useRef<number>(0);
+
+  useEffect(() => {
+  if (tableContainerRef.current) {
+    tableContainerRef.current.scrollLeft = scrollPositionRef.current;
+  }
+}, [veedores]); 
 
   // Sincroniza el scroll de ambos contenedores
   useEffect(() => {
@@ -390,24 +397,48 @@ export default function VeedoresPage() {
     );
   };
   
-  const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
-    setLoading(true);
-    const { error } = await supabase
-      .from('veedores')
-      .update({ [key]: value })
-      .eq('id', id);
+  // const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
+  //   setLoading(true);
+  //   const { error } = await supabase
+  //     .from('veedores')
+  //     .update({ [key]: value })
+  //     .eq('id', id);
 
-    if (error) {
-      setError(`Error al actualizar el campo ${key}: ${error.message}`);
-    } else {
-      setVeedores(prevVeedores =>
-        prevVeedores.map(veedor =>
-          veedor.id === id ? { ...veedor, [key]: value } : veedor
-        )
-      );
-    }
-    setLoading(false);
-  };
+  //   if (error) {
+  //     setError(`Error al actualizar el campo ${key}: ${error.message}`);
+  //   } else {
+  //     setVeedores(prevVeedores =>
+  //       prevVeedores.map(veedor =>
+  //         veedor.id === id ? { ...veedor, [key]: value } : veedor
+  //       )
+  //     );
+  //   }
+  //   setLoading(false);
+  // };
+
+ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
+  setLoading(true);
+  
+  if (tableContainerRef.current) {
+    scrollPositionRef.current = tableContainerRef.current.scrollLeft; // <-- Guarda la posición actual
+  }
+
+  const { error } = await supabase
+    .from('veedores')
+    .update({ [key]: value })
+    .eq('id', id);
+
+  if (error) {
+    setError(`Error al actualizar el campo ${key}: ${error.message}`);
+  } else {
+    setVeedores(prevVeedores =>
+      prevVeedores.map(veedor =>
+        veedor.id === id ? { ...veedor, [key]: value } : veedor
+      )
+    );
+  }
+  setLoading(false);
+};
 
   const handleAddModalOpen = () => {
     setIsAddModalOpen(true);
@@ -682,7 +713,7 @@ export default function VeedoresPage() {
                         disabled={loading}
                       />
                     ) : (
-                      key === 'observaciones' ? (
+                      key === 'OBSERVACIONES' ? (
                         <textarea
                           id={key}
                           name={key}
@@ -744,7 +775,7 @@ export default function VeedoresPage() {
                         disabled={loading}
                       />
                     ) : (
-                      key === 'observaciones' ? (
+                      key === 'OBSERVACIONES' ? (
                         <textarea
                           id={key}
                           name={key}
