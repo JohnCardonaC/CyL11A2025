@@ -162,6 +162,14 @@ export default function VeedoresPage() {
   const [newVeedor, setNewVeedor] = useState<Partial<Veedor>>({});
   const [addFeedback, setAddFeedback] = useState('');
 
+  // Nuevo estado para el modal de observaciones
+  const [isObservacionesModalOpen, setIsObservacionesModalOpen] = useState(false);
+  const [modalObservacionesData, setModalObservacionesData] = useState<{
+    id: number;
+    columnKey: 'OBSERVACIONES' | 'OBSERVACIONES_TARDE';
+    value: string;
+  } | null>(null);
+
   // Estado para el ordenamiento
   const [sortConfig, setSortConfig] = useState<{ key: keyof Veedor, direction: 'asc' | 'desc' | 'none' } | null>(null);
 
@@ -611,6 +619,56 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
     A: setFilterA, B: setFilterB, C: setFilterC, D: setFilterD, E: setFilterE, F: setFilterF
   };
 
+  // ----------------------------------------------------
+  // Nuevas funciones para el modal de observaciones
+  // ----------------------------------------------------
+  const handleOpenObservacionesModal = (veedorId: number, columnKey: 'OBSERVACIONES' | 'OBSERVACIONES_TARDE', value: string) => {
+    setModalObservacionesData({ id: veedorId, columnKey, value });
+    setIsObservacionesModalOpen(true);
+  };
+
+  const handleObservacionesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (modalObservacionesData) {
+      setModalObservacionesData({ ...modalObservacionesData, value: e.target.value });
+    }
+  };
+
+  const handleSaveObservacionesModal = async () => {
+    if (!modalObservacionesData) return;
+
+    setLoading(true);
+    const { id, columnKey, value } = modalObservacionesData;
+    const updatePayload = { [columnKey]: value };
+
+    const { error } = await supabase
+      .from('veedores')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error saving observation:', error.message);
+      setError('Error al guardar observaciones: ' + error.message);
+    } else {
+      // Actualizar el estado local para reflejar el cambio
+      setVeedores(prevVeedores =>
+        prevVeedores.map(veedor =>
+          veedor.id === id ? { ...veedor, [columnKey]: value } : veedor
+        )
+      );
+      // Re-fetch para asegurar la consistencia y recargar la página si es necesario
+      await obtenerVeedores();
+    }
+    setLoading(false);
+    setIsObservacionesModalOpen(false);
+    setModalObservacionesData(null);
+  };
+
+  const handleCloseObservacionesModal = () => {
+    setIsObservacionesModalOpen(false);
+    setModalObservacionesData(null);
+  };
+
+
   return (
     <main style={styles.main}>
       <div style={styles.container}>
@@ -757,6 +815,8 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                       {visibleColumns.map(key => {
                         const isBooleanColumn = booleanColumns.includes(key);
                         const isObservacionesColumn = key === 'OBSERVACIONES' || key === 'OBSERVACIONES_TARDE';
+                        const veedorValue = veedor[key as keyof Veedor];
+                        const displayValue = veedorValue || '-';
 
                         const cellStyle = {
                           ...styles.td,
@@ -769,7 +829,7 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                             <td key={key} style={{...cellStyle, textAlign: 'center'}}>
                               <input
                                 type="checkbox"
-                                checked={veedor[key as keyof Veedor] as boolean}
+                                checked={veedorValue as boolean}
                                 onChange={(e) => handleCheckboxChange(veedor.id, key as keyof Veedor, e.target.checked)}
                                 disabled={loading}
                               />
@@ -777,9 +837,49 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
                           );
                         }
                         
+                        // Lógica para las columnas de observaciones
+                        if (isObservacionesColumn) {
+                            // Si hay texto, lo truncamos y mostramos "Ver más"
+                            if (veedorValue && typeof veedorValue === 'string' && veedorValue.length > 30) {
+                                return (
+                                    <td key={key} style={cellStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{ flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{veedorValue}</span>
+                                            <button
+                                                onClick={() => handleOpenObservacionesModal(veedor.id, key as 'OBSERVACIONES' | 'OBSERVACIONES_TARDE', veedorValue)}
+                                                style={styles.verMasLink}
+                                            >
+                                                Ver más
+                                            </button>
+                                        </div>
+                                    </td>
+                                );
+                            } else if (veedorValue && typeof veedorValue === 'string' && veedorValue.length <= 30) {
+                                // Si el texto es corto, lo mostramos directamente
+                                return (
+                                    <td key={key} style={cellStyle}>
+                                        {veedorValue}
+                                    </td>
+                                );
+                            } else {
+                                // Si no hay texto, mostramos el botón "Agregar Observación"
+                                return (
+                                    <td key={key} style={cellStyle}>
+                                        <button
+                                            onClick={() => handleOpenObservacionesModal(veedor.id, key as 'OBSERVACIONES' | 'OBSERVACIONES_TARDE', '')}
+                                            style={styles.addObservacionButton}
+                                        >
+                                            Agregar Observación
+                                        </button>
+                                    </td>
+                                );
+                            }
+                        }
+
+                        // Lógica para el resto de las columnas
                         return (
                           <td key={key} style={cellStyle}>
-                            {veedor[key as keyof Veedor] || '-'}
+                            {displayValue}
                           </td>
                         );
                       })}
@@ -938,6 +1038,31 @@ const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolea
           </div>
         </div>
       )}
+
+      {/* Nuevo Modal para observaciones */}
+      {isObservacionesModalOpen && modalObservacionesData && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalContent, maxWidth: '500px' }}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Editar {allColumns.find(c => c.key === modalObservacionesData.columnKey)?.label}</h2>
+              <button onClick={handleCloseObservacionesModal} style={styles.closeButton}><CloseIcon /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <textarea
+                value={modalObservacionesData.value}
+                onChange={handleObservacionesChange}
+                style={{ ...styles.editInput, height: '150px', resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button onClick={handleCloseObservacionesModal} style={styles.cancelButton}>Cerrar</button>
+                <button onClick={handleSaveObservacionesModal} style={styles.confirmButton}>
+                  <SaveIcon /> Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </main>
   );
@@ -981,6 +1106,31 @@ const styles: { [key: string]: React.CSSProperties } = {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+    },
+    verMasLink: {
+        color: '#2563EB',
+        fontWeight: 'bold',
+        textDecoration: 'none',
+        cursor: 'pointer',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        fontSize: '0.875rem'
+    },
+    addObservacionButton: {
+        backgroundColor: '#ECFDF5',
+        color: '#16A34A',
+        border: '1px solid #A7F3D0',
+        borderRadius: '0.375rem',
+        padding: '0.25rem 0.75rem',
+        cursor: 'pointer',
+        fontWeight: 500,
+        fontSize: '0.875rem',
+        whiteSpace: 'nowrap',
+        transition: 'background-color 0.2s',
+        '&:hover': {
+            backgroundColor: '#D1FAE5'
+        }
     },
     tr: { transition: 'background-color 0.2s ease-in-out' },
     deleteButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s, opacity 0.2s', },
