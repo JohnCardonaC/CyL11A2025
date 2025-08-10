@@ -130,13 +130,16 @@ export default function VeedoresPage() {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
-  const scrollPositionRef = useRef<number>(0);
+  const scrollPositionRef = useRef({ left: 0, top: 0 });
+  const [scrollLeft, setScrollLeft] = useState(0);
 
-  useEffect(() => {
+
+ useEffect(() => {
+  // Sincroniza la posición horizontal del scroll
   if (tableContainerRef.current) {
-    tableContainerRef.current.scrollLeft = scrollPositionRef.current;
+    tableContainerRef.current.scrollLeft = scrollLeft;
   }
-}, [veedores]); 
+}, [scrollLeft, veedores, tableContainerRef]); // Dependencias: scrollLeft, veedores y la referencia
 
   // Sincroniza el scroll de ambos contenedores
   useEffect(() => {
@@ -298,6 +301,8 @@ export default function VeedoresPage() {
   
   // Unifica las llamadas a la API en un solo useEffect
   useEffect(() => {
+        console.log("useEffect se está ejecutando. currentPage:", currentPage);
+
     const delayDebounceFn = setTimeout(() => {
       const filters = {
         codSitio: searchCodSitio,
@@ -416,28 +421,27 @@ export default function VeedoresPage() {
   //   setLoading(false);
   // };
 
- const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
-  setLoading(true);
-  
-  if (tableContainerRef.current) {
-    scrollPositionRef.current = tableContainerRef.current.scrollLeft; // <-- Guarda la posición actual
-  }
 
-  const { error } = await supabase
-    .from('veedores')
-    .update({ [key]: value })
-    .eq('id', id);
 
-  if (error) {
-    setError(`Error al actualizar el campo ${key}: ${error.message}`);
-  } else {
-    setVeedores(prevVeedores =>
-      prevVeedores.map(veedor =>
-        veedor.id === id ? { ...veedor, [key]: value } : veedor
-      )
-    );
-  }
-  setLoading(false);
+const handleCheckboxChange = async (id, key, value) => {
+    // Guarda la posición actual del scroll en el estado
+    setScrollLeft(tableContainerRef.current?.scrollLeft || 0);
+
+    const { error } = await supabase
+        .from('veedores')
+        .update({ [key]: value })
+        .eq('id', id);
+
+    if (error) {
+        setError(`Error al actualizar el campo ${key}: ${error.message}`);
+    } else {
+        // Actualiza el estado local de veedores
+        setVeedores(prevVeedores =>
+            prevVeedores.map(veedor =>
+                veedor.id === id ? { ...veedor, [key]: value } : veedor
+            )
+        );
+    }
 };
 
   const handleAddModalOpen = () => {
