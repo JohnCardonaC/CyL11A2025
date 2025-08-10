@@ -84,7 +84,12 @@ export default function VeedoresPage() {
     'celular', 
     'banco', 
     'Tipo Cuenta', 
-    'No. Cuenta'
+    'No. Cuenta',
+    'capacita', 
+    'cedula', 
+    'salones', 
+    'CITADOS 10', 
+    'barrio'
   ];
   const initialVisibleColumns = allColumnKeys.filter(key => !excludedColumns.includes(key));
   const [visibleColumns, setVisibleColumns] = useState<string[]>(initialVisibleColumns);
@@ -127,44 +132,44 @@ export default function VeedoresPage() {
   const tableRef = useRef<HTMLTableElement>(null);
 
   // Sincroniza el scroll de ambos contenedores
-useEffect(() => {
-  const tableContainer = tableContainerRef.current;
-  const topScroll = topScrollRef.current;
-  const table = tableRef.current;
-  if (!tableContainer || !topScroll || !table) return;
+  useEffect(() => {
+    const tableContainer = tableContainerRef.current;
+    const topScroll = topScrollRef.current;
+    const table = tableRef.current;
+    if (!tableContainer || !topScroll || !table) return;
 
-  // Asegura que el scroll superior tiene el mismo ancho que la tabla
-  const setScrollWidth = () => {
-    const tableWidth = table.offsetWidth;
-    const topScrollContent = topScroll.querySelector('div');
-    if (topScrollContent) {
-      topScrollContent.style.width = `${tableWidth}px`;
-    }
-  };
+    // Asegura que el scroll superior tiene el mismo ancho que la tabla
+    const setScrollWidth = () => {
+      const tableWidth = table.offsetWidth;
+      const topScrollContent = topScroll.querySelector('div');
+      if (topScrollContent) {
+        topScrollContent.style.width = `${tableWidth}px`;
+      }
+    };
+    
+    // Inicia el ancho del scroll superior
+    setScrollWidth();
+    
+    // Escucha eventos de redimensionamiento para ajustar el ancho
+    window.addEventListener('resize', setScrollWidth);
 
-  // Inicia el ancho del scroll superior
-  setScrollWidth();
+    const syncScroll = (event: Event) => {
+      if (event.target === tableContainer) {
+        topScroll.scrollLeft = tableContainer.scrollLeft;
+      } else if (event.target === topScroll) {
+        tableContainer.scrollLeft = topScroll.scrollLeft;
+      }
+    };
 
-  // Escucha eventos de redimensionamiento para ajustar el ancho
-  window.addEventListener('resize', setScrollWidth);
+    tableContainer.addEventListener('scroll', syncScroll);
+    topScroll.addEventListener('scroll', syncScroll);
 
-  const syncScroll = (event: Event) => {
-    if (event.target === tableContainer) {
-      topScroll.scrollLeft = tableContainer.scrollLeft;
-    } else if (event.target === topScroll) {
-      tableContainer.scrollLeft = topScroll.scrollLeft;
-    }
-  };
-
-  tableContainer.addEventListener('scroll', syncScroll);
-  topScroll.addEventListener('scroll', syncScroll);
-
-  return () => {
-    tableContainer.removeEventListener('scroll', syncScroll);
-    topScroll.removeEventListener('scroll', syncScroll);
-    window.removeEventListener('resize', setScrollWidth);
-  };
-}, [visibleColumns, veedores]); // Eliminamos columnWidths de las dependencias
+    return () => {
+      tableContainer.removeEventListener('scroll', syncScroll);
+      topScroll.removeEventListener('scroll', syncScroll);
+      window.removeEventListener('resize', setScrollWidth);
+    };
+  }, [visibleColumns, veedores]);
 
   // Estado y Ref para el redimensionamiento de columnas
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
@@ -510,35 +515,56 @@ useEffect(() => {
             </div>
           </div>
           <div style={styles.actionsContainer}>
-            <button onClick={handleAddModalOpen} style={styles.addButton}>
-              <PlusIcon />
-              Agregar
-            </button>
-            <div style={styles.columnsDropdownContainer}>
-              <button onClick={() => setIsColumnsDropdownOpen(!isColumnsDropdownOpen)} style={styles.columnsDropdownButton}>
-                <ColumnsIcon />
-                Columnas
-              </button>
-              {isColumnsDropdownOpen && (
-                <div style={styles.columnsDropdownMenu}>
-                  {allColumns.map(col => (
-                    <label key={col.key} style={styles.columnsDropdownItem}>
-                      <input
-                        type="checkbox"
-                        checked={visibleColumns.includes(col.key)}
-                        onChange={() => handleColumnToggle(col.key)}
-                      />
-                      {col.label}
-                    </label>
-                  ))}
-                </div>
+            <div style={styles.leftActionsContainer}>
+              <div style={styles.itemsPerPageContainer}>
+                <span>Filas por página:</span>
+                <select value={itemsPerPage} onChange={handleItemsPerPageChange} style={styles.selectInput}>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={150}>150</option>
+                    <option value={250}>250</option>
+                    <option value={550}>550</option>
+                    <option value={-1}>Todas</option>
+                </select>
+              </div>
+              {totalRecords !== null && (
+                <span style={styles.recordCountText}>
+                  Total de registros: {totalRecords}
+                </span>
               )}
             </div>
-            <ImportButton onImportSuccess={obtenerVeedores} />
-            <button onClick={handleDeleteSelected} disabled={selectedRows.length === 0} style={selectedRows.length > 0 ? styles.deleteButton : { ...styles.deleteButton, ...styles.deleteButtonDisabled }}>
-              <TrashIcon />
-              Eliminar ({selectedRows.length})
-            </button>
+            <div style={styles.rightActionsContainer}>
+              <button onClick={handleAddModalOpen} style={styles.addButton}>
+                <PlusIcon />
+                Agregar
+              </button>
+              <div style={styles.columnsDropdownContainer}>
+                <button onClick={() => setIsColumnsDropdownOpen(!isColumnsDropdownOpen)} style={styles.columnsDropdownButton}>
+                  <ColumnsIcon />
+                  Columnas
+                </button>
+                {isColumnsDropdownOpen && (
+                  <div style={styles.columnsDropdownMenu}>
+                    {allColumns.map(col => (
+                      <label key={col.key} style={styles.columnsDropdownItem}>
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns.includes(col.key)}
+                          onChange={() => handleColumnToggle(col.key)}
+                        />
+                        {col.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <ImportButton onImportSuccess={obtenerVeedores} />
+              <button onClick={handleDeleteSelected} disabled={selectedRows.length === 0} style={selectedRows.length > 0 ? styles.deleteButton : { ...styles.deleteButton, ...styles.deleteButtonDisabled }}>
+                <TrashIcon />
+                Eliminar ({selectedRows.length})
+              </button>
+            </div>
           </div>
         </div>
         {loading && <p>Cargando datos...</p>}
@@ -563,8 +589,8 @@ useEffect(() => {
                       const column = allColumns.find(col => col.key === key);
                       if (!column) return null;
                       return (
-                        <th key={key} style={{...styles.th, cursor: 'pointer', position: 'relative', width: columnWidths[key] || 'auto', minWidth: '100px'}}>
-                          <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', color: '#4B5563'}}>
+                        <th key={key} style={{...styles.th, textAlign: 'left', cursor: 'pointer', position: 'relative', width: columnWidths[key] || 'auto', minWidth: '100px'}}>
+                          <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', color: '#4B5563'}}>
                             <span>{column.label}</span>
                           </div>
                           <div onMouseDown={(e) => startResizing(e, key)} style={styles.resizer} />
@@ -612,19 +638,21 @@ useEffect(() => {
               </table>
             </div>
             {/* Controles de paginación */}
-            {showPagination && (
-              <div style={styles.paginationContainer}>
-                <button onClick={handlePrevPage} disabled={currentPage === 0 || loading} style={currentPage === 0 || loading ? {...styles.paginationButton, opacity: 0.5, cursor: 'not-allowed'} : styles.paginationButton}>
-                  <ChevronLeftIcon />
-                  Anterior
-                </button>
-                <span style={styles.pageNumber}>Página {currentPage + 1} de {totalRecords && itemsPerPage && Math.ceil(totalRecords / itemsPerPage)}</span>
-                <button onClick={handleNextPage} disabled={!hasMorePages || loading} style={!hasMorePages || loading ? {...styles.paginationButton, opacity: 0.5, cursor: 'not-allowed'} : styles.paginationButton}>
-                  Siguiente
-                  <ChevronRightIcon />
-                </button>
-              </div>
-            )}
+            <div style={styles.paginationControlsContainer}>
+                {showPagination && (
+                    <div style={styles.paginationContainer}>
+                        <button onClick={handlePrevPage} disabled={currentPage === 0 || loading} style={currentPage === 0 || loading ? {...styles.paginationButton, opacity: 0.5, cursor: 'not-allowed'} : styles.paginationButton}>
+                            <ChevronLeftIcon />
+                            Anterior
+                        </button>
+                        <span style={styles.pageNumber}>Página {currentPage + 1} de {totalRecords && itemsPerPage && Math.ceil(totalRecords / itemsPerPage)}</span>
+                        <button onClick={handleNextPage} disabled={!hasMorePages || loading} style={!hasMorePages || loading ? {...styles.paginationButton, opacity: 0.5, cursor: 'not-allowed'} : styles.paginationButton}>
+                            Siguiente
+                            <ChevronRightIcon />
+                        </button>
+                    </div>
+                )}
+            </div>
           </>
         )}
 
@@ -768,7 +796,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     searchFilterContainer: { display: 'flex', flexWrap: 'wrap', gap: '0.75rem' },
     searchContainer: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', flex: 1, minWidth: '200px' },
     searchInput: { border: 'none', outline: 'none', padding: '0', fontSize: '1rem', width: '100%', color: '#111827' },
-    actionsContainer: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', flexShrink: 0 },
+    actionsContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexShrink: 0 },
+    leftActionsContainer: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
+    rightActionsContainer: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
+    topControlsContainer: { display: 'flex', alignItems: 'center', gap: '1rem' },
+    recordCountText: { fontSize: '0.875rem', color: '#4B5563', fontWeight: '500' },
     topScrollContainer: {
         width: '100%',
         overflowX: 'auto',
@@ -791,7 +823,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     addButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #16A34A', borderRadius: '0.375rem', backgroundColor: '#ECFDF5', color: '#16A34A', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s' },
     
     // -- NUEVOS ESTILOS PARA PAGINACIÓN Y FILTROS --
-    paginationContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' },
+    paginationControlsContainer: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '1rem' },
+    itemsPerPageContainer: { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#4B5563' },
+    paginationContainer: { display: 'flex', alignItems: 'center', gap: '1rem' },
     paginationButton: { padding: '0.5rem 1rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', fontWeight: 500, color: '#374151', display: 'flex', alignItems: 'center', gap: '0.5rem' },
     pageNumber: { fontSize: '1rem', fontWeight: 600, color: '#374151' },
     selectInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', color: '#4B5563' },
