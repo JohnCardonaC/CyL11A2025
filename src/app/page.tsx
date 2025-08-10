@@ -5,12 +5,11 @@ import Image from 'next/image';
 import { supabase } from '../lib/supabaseClient';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import ImportButton from '../components/ImportButton'; // Importación correcta del componente
 
 // ====================================================================
 // ÍCONOS SVG
 // ====================================================================
-const UploadIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#9CA3AF' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> );
-const FileIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> );
 const TrashIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg> );
 const CloseIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> );
 const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>);
@@ -53,67 +52,6 @@ const allColumns = [
   { key: 'B', label: 'B' },
   { key: 'C', label: 'C' },
 ];
-
-
-// ====================================================================
-// COMPONENTE DE IMPORTACIÓN (CON ESTILOS AJUSTADOS)
-// ====================================================================
-const ImportButton = ({ onImportSuccess }: { onImportSuccess: () => void }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [feedback, setFeedback] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files.length > 0) { setFile(e.target.files[0]); setFeedback(''); } };
-  const handleDragEvents = (e: React.DragEvent<HTMLLabelElement>, dragging: boolean) => { e.preventDefault(); e.stopPropagation(); setIsDragging(dragging); };
-  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => { handleDragEvents(e, false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) { setFile(e.dataTransfer.files[0]); setFeedback(''); } };
-  const parseFile = (file: File): Promise<RawVeedorData[]> => { return new Promise((resolve, reject) => { if (file.name.endsWith('.csv')) { Papa.parse(file, { header: true, skipEmptyLines: true, complete: (result) => resolve(result.data as RawVeedorData[]), error: (err) => reject(err) }); } else if (file.name.endsWith('.xlsx')) { const reader = new FileReader(); reader.onload = (e) => { try { const data = new Uint8Array(e.target?.result as ArrayBuffer); const workbook = XLSX.read(data, { type: 'array' }); const sheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[sheetName]; const json = XLSX.utils.sheet_to_json(worksheet); resolve(json as RawVeedorData[]); } catch (err) { reject(err); } }; reader.onerror = reject; reader.readAsArrayBuffer(file); } else { reject(new Error('Formato no soportado. Usa .csv o .xlsx')); } }); };
-  const mapDataToSchema = (data: RawVeedorData[]): Partial<Veedor>[] => { return data.map(row => { let fechaAplica = row['Fecha aplica']; if (typeof fechaAplica === 'number') { fechaAplica = new Date((fechaAplica - 25569) * 86400 * 1000).toISOString().split('T')[0]; } return { nodo: String(row.NODO || ''), departamento: String(row.DEPARTAMENTO || ''), Cod_Ciudad: Number(row['Cod_Ciudad']) || null, "COD CYL": Number(row['COD CYL']) || null, ppal: String(row.Ppal || ''), ciudad: String(row.Ciudad || ''), "Cod_Sitio": String(row['Cod_Sitio'] || ''), "Fecha aplica": fechaAplica ? String(fechaAplica) : null, hora: String(row.Hora || ''), sitio: String(row.Sitio || ''), direccion: String(row.Direccion || ''), barrio: String(row.Barrio || ''), salones: Number(row.SALONES) || null, "CITADOS 10": Number(row['CITADOS 10']) || null, contrato: String(row.Contrato || ''), capacita: String(row.CAPACITA || ''), nombres: String(row.Nombres || ''), apellidos: String(row.Apellidos || ''), cedula: String(row.Cedula || ''), celular: String(row.Celular || ''), correo: String(row.Correo || ''), banco: String(row.Banco || ''), "Tipo Cuenta": String(row['Tipo Cuenta'] || ''), "No. Cuenta": String(row['No. Cuenta'] || ''), }; }); };
-  const handleImport = async () => { if (!file) { setFeedback('Por favor, selecciona un archivo primero.'); return; } setIsProcessing(true); setFeedback('Procesando archivo...'); try { const data = await parseFile(file); setFeedback('Archivo leído. Mapeando columnas...'); const mappedData = mapDataToSchema(data); setFeedback(`Datos mapeados. Subiendo ${mappedData.length} registros...`); const BATCH_SIZE = 100; for (let i = 0; i < mappedData.length; i += BATCH_SIZE) { const batch = mappedData.slice(i, i + BATCH_SIZE); const { error } = await supabase.from('veedores').insert(batch); if (error) throw new Error(`Error en Supabase: ${error.message}`); setFeedback(`Subiendo... ${Math.min(i + BATCH_SIZE, mappedData.length)} de ${mappedData.length} registros.`); } setFeedback('¡Importación completada con éxito!'); onImportSuccess(); setTimeout(() => closeModal(), 2000); } catch (error) { if (error instanceof Error) { setFeedback(`Error: ${error.message}`); } else { setFeedback('Ocurrió un error desconocido.'); } } finally { setIsProcessing(false); }};
-  const closeModal = () => { setIsModalOpen(false); setFile(null); setFeedback(''); setIsProcessing(false); };
-
-  return (
-    <>
-      <button onClick={() => setIsModalOpen(true)} style={styles.importButton}>
-        <UploadIcon />
-        Importar Datos
-      </button>
-      {isModalOpen && (
-        <div style={styles.modalOverlay}>
-          <div style={{...styles.modalContent, animation: 'fadeIn 0.3s ease-out'}}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Importar Veedores</h2>
-              <button onClick={closeModal} style={styles.closeButton}><CloseIcon /></button>
-            </div>
-            <p style={styles.modalSubtext}>El archivo debe ser .xlsx o .csv y tener las columnas correctas.</p>
-            {!file ? (
-              <label htmlFor="file-upload" style={{...styles.dropzone, borderColor: isDragging ? '#3B82F6' : '#D1D5DB'}} onDragOver={(e) => handleDragEvents(e, true)} onDragLeave={(e) => handleDragEvents(e, false)} onDrop={handleDrop}>
-                <UploadIcon />
-                <span style={{fontWeight: 600, color: '#3B82F6'}}>Sube un archivo</span> o arrástralo aquí
-                <p style={{fontSize: '0.75rem', margin: 0, color: '#6B7280'}}>XLSX, CSV hasta 10MB</p>
-                <input id="file-upload" type="file" accept=".xlsx, .csv" onChange={handleFileChange} style={{ display: 'none' }} disabled={isProcessing}/>
-              </label>
-            ) : (
-              <div style={styles.filePreview}>
-                <FileIcon />
-                <span>{file.name}</span>
-                <button onClick={() => setFile(null)} style={styles.removeFileButton} disabled={isProcessing}><CloseIcon /></button>
-              </div>
-            )}
-            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button onClick={closeModal} style={styles.cancelButton} disabled={isProcessing}>Cancelar</button>
-              <button onClick={handleImport} style={isProcessing ? {...confirmButtonStyle, opacity: 0.5} : confirmButtonStyle} disabled={!file || isProcessing}>
-                {isProcessing ? 'Procesando...' : 'Confirmar e Importar'}
-              </button>
-            </div>
-            {feedback && <p style={{ marginTop: '1rem', textAlign: 'center', fontWeight: 500, color: feedback.startsWith('Error') ? '#DC2626' : '#16A34A' }}>{feedback}</p>}
-          </div>
-        </div>
-      )}
-    </>
-  );
-};
 
 
 // ====================================================================
@@ -321,9 +259,9 @@ export default function VeedoresPage() {
   const closeAddModal = () => {
     setIsAddModalOpen(false);
   };
-  const handleNewVeedorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewVeedor(prev => ({ ...prev, [name]: value }));
+  const handleNewVeedorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type, checked } = e.target;
+    setNewVeedor(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
   const handleAgregarSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
