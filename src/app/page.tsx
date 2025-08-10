@@ -15,12 +15,12 @@ const TrashIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="16" hei
 const CloseIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> );
 const EditIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>);
 const SaveIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>);
-const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6B7280' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
-const ColumnsIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4B5563' }}><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>);
+const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6B7280' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> );
+const ColumnsIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4B5563' }}><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg> );
 
 
 // Interfaces
-interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; }
+interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; }
 type RawVeedorData = { [key: string]: string | number; };
 
 // Definición de todas las columnas de la tabla
@@ -49,6 +49,9 @@ const allColumns = [
   { key: 'banco', label: 'Banco' },
   { key: 'Tipo Cuenta', label: 'Tipo Cuenta' },
   { key: 'No. Cuenta', label: 'No. Cuenta' },
+  { key: 'A', label: 'A' },
+  { key: 'B', label: 'B' },
+  { key: 'C', label: 'C' },
 ];
 
 
@@ -282,6 +285,27 @@ export default function VeedoresPage() {
         : [...prev, columnKey]
     );
   };
+  
+  // Manejador para los checkboxes de las columnas A, B, C
+  const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
+    setLoading(true);
+    const { error } = await supabase
+      .from('veedores')
+      .update({ [key]: value })
+      .eq('id', id);
+
+    if (error) {
+      setError(`Error al actualizar el campo ${key}: ${error.message}`);
+    } else {
+      // Actualizar el estado local para reflejar el cambio inmediatamente
+      setVeedores(prevVeedores =>
+        prevVeedores.map(veedor =>
+          veedor.id === id ? { ...veedor, [key]: value } : veedor
+        )
+      );
+    }
+    setLoading(false);
+  };
 
 
   return (
@@ -363,9 +387,23 @@ export default function VeedoresPage() {
                   <tr key={veedor.id} style={{ ...styles.tr, backgroundColor: selectedRows.includes(veedor.id) ? '#E0E7FF' : (hoveredRowId === veedor.id ? '#F9FAFB' : 'transparent') }} onMouseEnter={() => setHoveredRowId(veedor.id)} onMouseLeave={() => setHoveredRowId(null)}>
                     <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
                     <td style={styles.td}>{index + 1}</td>
-                    {visibleColumns.map(key => (
-                      <td key={key} style={styles.td}>{veedor[key as keyof Veedor] || '-'}</td>
-                    ))}
+                    {visibleColumns.map(key => {
+                        // Lógica especial para las columnas A, B y C
+                        if (['A', 'B', 'C'].includes(key)) {
+                          return (
+                            <td key={key} style={{...styles.td, textAlign: 'center'}}>
+                                <input
+                                  type="checkbox"
+                                  checked={veedor[key as keyof Veedor] as boolean}
+                                  onChange={(e) => handleCheckboxChange(veedor.id, key as keyof Veedor, e.target.checked)}
+                                  disabled={loading}
+                                />
+                            </td>
+                          );
+                        }
+                        // Lógica para las demás columnas
+                        return <td key={key} style={styles.td}>{veedor[key as keyof Veedor] || '-'}</td>;
+                    })}
                     <td style={styles.td}>
                       <div style={styles.actionsCell}>
                         <button onClick={() => handleEditRow(veedor)} style={styles.actionButton}>
