@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '../lib/supabaseClient'; // RUTA CORREGIDA Y DEFINITIVA
+import { supabase } from '../lib/supabaseClient';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -14,6 +14,7 @@ export default function ImportButton({ onImportSuccess }: { onImportSuccess: () 
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
