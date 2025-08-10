@@ -103,7 +103,7 @@ const ImportButton = ({ onImportSuccess }: { onImportSuccess: () => void }) => {
             )}
             <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button onClick={closeModal} style={styles.cancelButton} disabled={isProcessing}>Cancelar</button>
-              <button onClick={handleImport} style={isProcessing ? {...styles.confirmButton, opacity: 0.7, cursor: 'wait'} : styles.confirmButton} disabled={!file || isProcessing}>
+              <button onClick={handleImport} style={isProcessing ? {...confirmButtonStyle, opacity: 0.5} : confirmButtonStyle} disabled={!file || isProcessing}>
                 {isProcessing ? 'Procesando...' : 'Confirmar e Importar'}
               </button>
             </div>
@@ -252,8 +252,8 @@ export default function VeedoresPage() {
 
   // Manejador de cambios en los campos del modal de edición
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditingVeedor(prev => (prev ? { ...prev, [name]: value } : null));
+    const { name, value, type, checked } = e.target;
+    setEditingVeedor(prev => (prev ? { ...prev, [name]: type === 'checkbox' ? checked : value } : null));
   };
 
   // Manejador del envío del formulario de edición
@@ -472,20 +472,36 @@ export default function VeedoresPage() {
               <button onClick={closeEditModal} style={styles.closeButton}><CloseIcon /></button>
             </div>
             <form onSubmit={handleEditSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              {Object.keys(editingVeedor).filter(key => key !== 'id' && key !== 'createdAt' && key !== 'A' && key !== 'B' && key !== 'C').map(key => (
-                <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                  <label htmlFor={key} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{key.replace(/_/g, ' ')}</label>
-                  <input
-                    id={key}
-                    name={key}
-                    type="text"
-                    value={editingVeedor[key as keyof Veedor] || ''}
-                    onChange={handleEditChange}
-                    style={styles.editInput}
-                    disabled={key === 'createdAt'}
-                  />
-                </div>
-              ))}
+              {allColumns.filter(col => col.key !== 'id' && col.key !== 'createdAt').map(col => {
+                const key = col.key as keyof Veedor;
+                const isBoolean = ['A', 'B', 'C'].includes(key);
+                return (
+                  <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <label htmlFor={key} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{col.label}</label>
+                    {isBoolean ? (
+                      <input
+                        id={key}
+                        name={key}
+                        type="checkbox"
+                        checked={!!editingVeedor[key]}
+                        onChange={handleEditChange}
+                        style={{ width: 'auto' }}
+                        disabled={loading}
+                      />
+                    ) : (
+                      <input
+                        id={key}
+                        name={key}
+                        type="text"
+                        value={String(editingVeedor[key] || '')}
+                        onChange={handleEditChange}
+                        style={styles.editInput}
+                        disabled={key === 'createdAt' || loading}
+                      />
+                    )}
+                  </div>
+                );
+              })}
               <div style={{ gridColumn: '1 / -1', marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                 <button type="button" onClick={closeEditModal} style={styles.cancelButton} disabled={loading}>Cancelar</button>
                 <button type="submit" style={loading ? {...styles.confirmButton, opacity: 0.7, cursor: 'wait'} : styles.confirmButton} disabled={loading}>
