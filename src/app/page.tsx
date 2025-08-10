@@ -458,7 +458,7 @@ export default function VeedoresPage() {
   //   setLoading(false);
   // };
 
-const handleCheckboxChange = async (id, key, value) => {
+const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
     // Almacena la posición actual del scroll antes de la actualización del estado
     if (tableContainerRef.current) {
         scrollPositionRef.current.left = tableContainerRef.current.scrollLeft;
