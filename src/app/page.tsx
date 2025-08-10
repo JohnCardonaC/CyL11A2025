@@ -3,9 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabaseClient';
-import * as XLSX from 'xlsx';
-import Papa from 'papaparse';
-import ImportButton from '../components/ImportButton'; // Importación correcta del componente
+import ImportButton from '../components/ImportButton';
 
 // ====================================================================
 // ÍCONOS SVG
@@ -17,6 +15,8 @@ const SaveIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" heigh
 const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#6B7280' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> );
 const ColumnsIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4B5563' }}><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg> );
 const PlusIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>);
+const ChevronLeftIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>);
+const ChevronRightIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
 
 // Interfaces
 interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; }
@@ -53,10 +53,6 @@ const allColumns = [
   { key: 'C', label: 'C' },
 ];
 
-
-// ====================================================================
-// PÁGINA PRINCIPAL
-// ====================================================================
 const formatDisplayDate = (dateString: string | null | undefined) => { if (!dateString) return '-'; const date = new Date(dateString); return date.toLocaleDateString('es-CO', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }); };
 
 export default function VeedoresPage() {
@@ -77,6 +73,15 @@ export default function VeedoresPage() {
   const [searchDepartamento, setSearchDepartamento] = useState<string>('');
   const [searchCodCiudad, setSearchCodCiudad] = useState<string>('');
   const [searchSitio, setSearchSitio] = useState<string>('');
+  const [filterA, setFilterA] = useState<boolean>(false);
+  const [filterB, setFilterB] = useState<boolean>(false);
+  const [filterC, setFilterC] = useState<boolean>(false);
+
+  // Estado para la paginación
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [totalRecords, setTotalRecords] = useState<number | null>(null);
   
   // Estado para los modales
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -88,7 +93,7 @@ export default function VeedoresPage() {
   const [addFeedback, setAddFeedback] = useState('');
 
 
-  // Función para obtener veedores con filtros
+  // Función para obtener veedores con filtros y paginación
   const obtenerVeedores = async (
     filters: {
       codSitio?: string;
@@ -96,11 +101,16 @@ export default function VeedoresPage() {
       departamento?: string;
       codCiudad?: string;
       sitio?: string;
-    } = {}
+      A?: boolean;
+      B?: boolean;
+      C?: boolean;
+    } = {},
+    page: number = 0
   ) => {
     setLoading(true);
     setError(null);
-    let query = supabase.from('veedores').select('*').order('id', { ascending: true });
+
+    let query = supabase.from('veedores').select('*', { count: 'exact' });
 
     if (filters.codSitio) {
       query = query.ilike('Cod_Sitio', `%${filters.codSitio}%`);
@@ -117,35 +127,59 @@ export default function VeedoresPage() {
     if (filters.sitio) {
       query = query.ilike('sitio', `%${filters.sitio}%`);
     }
+    if (filters.A) {
+      query = query.eq('A', true);
+    }
+    if (filters.B) {
+      query = query.eq('B', true);
+    }
+    if (filters.C) {
+      query = query.eq('C', true);
+    }
 
-    const { data, error } = await query;
+    if (itemsPerPage !== -1) {
+      const from = page * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+    }
+    
+    query = query.order('id', { ascending: true });
+
+    const { data, error, count } = await query;
     if (error) {
       setError("Error al cargar datos: " + error.message);
     } else {
       setVeedores(data as Veedor[]);
+      setTotalRecords(count);
+      setHasMorePages(data.length === itemsPerPage);
     }
     setLoading(false);
   };
   
   // Llama a la función de obtención de datos al cargar la página
   useEffect(() => {
-    obtenerVeedores();
-  }, []);
+    obtenerVeedores({}, currentPage);
+  }, [currentPage, itemsPerPage]);
 
   // UseEffect para el filtrado dinámico en el servidor
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
+      setCurrentPage(0); // Reiniciar la página al aplicar un filtro
       obtenerVeedores({
         codSitio: searchCodSitio,
         ciudad: searchCiudad,
         departamento: searchDepartamento,
         codCiudad: searchCodCiudad,
-        sitio: searchSitio
-      });
+        sitio: searchSitio,
+        A: filterA,
+        B: filterB,
+        C: filterC,
+      }, 0);
     }, 500); // Debounce de 500ms para evitar múltiples llamadas a la API al escribir
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio]);
+  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, filterA, filterB, filterC]);
+
 
   const handleSelectRow = (id: number) => { setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]); };
   const handleSelectAll = () => { setSelectedRows(selectedRows.length === veedores.length ? [] : veedores.map(v => v.id)); };
@@ -286,6 +320,25 @@ export default function VeedoresPage() {
     setLoading(false);
   };
 
+  const handleNextPage = () => {
+    if (hasMorePages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const isAnyFilterActive = searchCodSitio || searchCiudad || searchDepartamento || searchCodCiudad || searchSitio || filterA || filterB || filterC;
+  const showPagination = !isAnyFilterActive && itemsPerPage !== -1;
+
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(0);
+  };
 
   return (
     <main style={styles.main}>
@@ -315,6 +368,20 @@ export default function VeedoresPage() {
             <div style={styles.searchContainer}>
               <SearchIcon />
               <input type="text" placeholder="Buscar por Cod_Ciudad..." value={searchCodCiudad} onChange={(e) => setSearchCodCiudad(e.target.value)} style={styles.searchInput} />
+            </div>
+            <div style={styles.filterCheckboxContainer}>
+              <label style={styles.filterCheckboxLabel}>
+                <input type="checkbox" checked={filterA} onChange={(e) => setFilterA(e.target.checked)} />
+                Columna A marcada
+              </label>
+              <label style={styles.filterCheckboxLabel}>
+                <input type="checkbox" checked={filterB} onChange={(e) => setFilterB(e.target.checked)} />
+                Columna B marcada
+              </label>
+              <label style={styles.filterCheckboxLabel}>
+                <input type="checkbox" checked={filterC} onChange={(e) => setFilterC(e.target.checked)} />
+                Columna C marcada
+              </label>
             </div>
           </div>
           <div style={styles.actionsContainer}>
@@ -352,56 +419,84 @@ export default function VeedoresPage() {
         {loading && <p>Cargando datos...</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
         {!loading && !error && (
-          <div style={styles.tableContainer}>
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.trHeader}>
-                  <th style={styles.th}><input type="checkbox" checked={veedores.length > 0 && selectedRows.length === veedores.length} onChange={handleSelectAll} style={{ cursor: 'pointer' }} /></th>
-                  <th style={styles.th}>No.</th>
-                  {visibleColumns.map(key => {
-                    const column = allColumns.find(col => col.key === key);
-                    return <th key={key} style={styles.th}>{column?.label}</th>;
-                  })}
-                  <th style={styles.th}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {veedores.map((veedor, index) => (
-                  <tr key={veedor.id} style={{ ...styles.tr, backgroundColor: selectedRows.includes(veedor.id) ? '#E0E7FF' : (hoveredRowId === veedor.id ? '#F9FAFB' : 'transparent') }} onMouseEnter={() => setHoveredRowId(veedor.id)} onMouseLeave={() => setHoveredRowId(null)}>
-                    <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
-                    <td style={styles.td}>{index + 1}</td>
+          <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#4B5563' }}>
+              <span>Registros por página:</span>
+              <select value={itemsPerPage} onChange={handleItemsPerPageChange} style={styles.selectInput}>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+                <option value="500">500</option>
+                <option value="1000">1000</option>
+                <option value="-1">Todos</option>
+              </select>
+            </div>
+            <div style={styles.tableContainer}>
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.trHeader}>
+                    <th style={styles.th}><input type="checkbox" checked={veedores.length > 0 && selectedRows.length === veedores.length} onChange={handleSelectAll} style={{ cursor: 'pointer' }} /></th>
+                    <th style={styles.th}>No.</th>
                     {visibleColumns.map(key => {
-                        // Lógica especial para las columnas A, B y C
-                        if (['A', 'B', 'C'].includes(key)) {
-                          return (
-                            <td key={key} style={{...styles.td, textAlign: 'center'}}>
-                                <input
-                                  type="checkbox"
-                                  checked={veedor[key as keyof Veedor] as boolean}
-                                  onChange={(e) => handleCheckboxChange(veedor.id, key as keyof Veedor, e.target.checked)}
-                                  disabled={loading}
-                                />
-                            </td>
-                          );
-                        }
-                        // Lógica para las demás columnas
-                        return <td key={key} style={styles.td}>{veedor[key as keyof Veedor] || '-'}</td>;
+                      const column = allColumns.find(col => col.key === key);
+                      return <th key={key} style={styles.th}>{column?.label}</th>;
                     })}
-                    <td style={styles.td}>
-                      <div style={styles.actionsCell}>
-                        <button onClick={() => handleEditRow(veedor)} style={styles.actionButton}>
-                          <EditIcon />
-                        </button>
-                        <button onClick={() => handleDeleteRow(veedor.id)} style={styles.actionButton}>
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </td>
+                    <th style={styles.th}>Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {veedores.map((veedor, index) => (
+                    <tr key={veedor.id} style={{ ...styles.tr, backgroundColor: selectedRows.includes(veedor.id) ? '#E0E7FF' : (hoveredRowId === veedor.id ? '#F9FAFB' : 'transparent') }} onMouseEnter={() => setHoveredRowId(veedor.id)} onMouseLeave={() => setHoveredRowId(null)}>
+                      <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
+                      <td style={styles.td}>{itemsPerPage === -1 ? (index + 1) : (currentPage * itemsPerPage + index + 1)}</td>
+                      {visibleColumns.map(key => {
+                          const column = allColumns.find(col => col.key === key);
+                          // Lógica especial para las columnas A, B y C
+                          if (['A', 'B', 'C'].includes(key)) {
+                            return (
+                              <td key={key} style={{...styles.td, textAlign: 'center'}}>
+                                  <input
+                                    type="checkbox"
+                                    checked={veedor[key as keyof Veedor] as boolean}
+                                    onChange={(e) => handleCheckboxChange(veedor.id, key as keyof Veedor, e.target.checked)}
+                                    disabled={loading}
+                                  />
+                              </td>
+                            );
+                          }
+                          // Lógica para las demás columnas
+                          return <td key={key} style={styles.td}>{veedor[key as keyof Veedor] || '-'}</td>;
+                      })}
+                      <td style={styles.td}>
+                        <div style={styles.actionsCell}>
+                          <button onClick={() => handleEditRow(veedor)} style={styles.actionButton}>
+                            <EditIcon />
+                          </button>
+                          <button onClick={() => handleDeleteRow(veedor.id)} style={styles.actionButton}>
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Controles de paginación */}
+            {showPagination && (
+              <div style={styles.paginationContainer}>
+                <button onClick={handlePrevPage} disabled={currentPage === 0 || loading} style={currentPage === 0 || loading ? {...styles.paginationButton, opacity: 0.5, cursor: 'not-allowed'} : styles.paginationButton}>
+                  <ChevronLeftIcon />
+                  Anterior
+                </button>
+                <span style={styles.pageNumber}>Página {currentPage + 1} de {totalRecords && itemsPerPage && Math.ceil(totalRecords / itemsPerPage)}</span>
+                <button onClick={handleNextPage} disabled={!hasMorePages || loading} style={!hasMorePages || loading ? {...styles.paginationButton, opacity: 0.5, cursor: 'not-allowed'} : styles.paginationButton}>
+                  Siguiente
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            )}
+          </>
         )}
 
       {/* Modal de edición */}
@@ -488,7 +583,7 @@ export default function VeedoresPage() {
                         value={String(newVeedor[key] || '')}
                         onChange={handleNewVeedorChange}
                         style={styles.editInput}
-                        disabled={key === 'createdAt' || loading}
+                        disabled={loading}
                       />
                     )}
                   </div>
@@ -534,14 +629,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     importButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #3B82F6', borderRadius: '0.375rem', backgroundColor: 'white', color: '#3B82F6', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s' },
     addButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #16A34A', borderRadius: '0.375rem', backgroundColor: '#ECFDF5', color: '#16A34A', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s' },
     
-    // -- INICIO DE NUEVOS ESTILOS PARA DROPDOWN Y MODAL --
+    // -- NUEVOS ESTILOS PARA PAGINACIÓN --
+    paginationContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' },
+    paginationButton: { padding: '0.5rem 1rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', fontWeight: 500, color: '#374151', display: 'flex', alignItems: 'center', gap: '0.5rem' },
+    pageNumber: { fontSize: '1rem', fontWeight: 600, color: '#374151' },
+    selectInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', color: '#4B5563' },
+    
+    // -- ESTILOS DE DROPDOWN Y MODAL --
     columnsDropdownContainer: { position: 'relative', display: 'inline-block' },
     columnsDropdownButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', color: '#4B5563', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s', },
     columnsDropdownMenu: { position: 'absolute', right: 0, top: '100%', marginTop: '0.5rem', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '0.375rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', zIndex: 50, padding: '0.5rem' },
     columnsDropdownItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', cursor: 'pointer', color: '#111827' },
-    // -- FIN DE ESTILOS --
-
-    // -- INICIO DE ESTILOS EXISTENTES (modal y acciones de fila) --
     modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(17, 24, 39, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' },
     modalContent: { backgroundColor: 'white', padding: '2rem', borderRadius: '0.75rem', width: '90%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
     modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
@@ -556,4 +654,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     actionsCell: { display: 'flex', gap: '0.5rem', justifyContent: 'center' },
     actionButton: { background: 'none', border: '1px solid #D1D5DB', padding: '0.5rem', borderRadius: '0.375rem', cursor: 'pointer', color: '#6B7280', transition: 'background-color 0.2s', },
     editInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', transition: 'border-color 0.2s', color: '#111827' },
+    filterCheckboxContainer: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
+    filterCheckboxLabel: { display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', color: '#111827' },
 };
