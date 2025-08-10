@@ -101,34 +101,100 @@ export default function VeedoresPage() {
   const [searchCiudad, setSearchCiudad] = useState<string>('');
   const [searchDepartamento, setSearchDepartamento] = useState<string>('');
   const [searchCodCiudad, setSearchCodCiudad] = useState<string>('');
-  const [searchSitio, setSearchSitio] = useState<string>(''); // Nuevo estado para el filtro de sitio
-  const [filteredVeedores, setFilteredVeedores] = useState<Veedor[]>([]);
+  const [searchSitio, setSearchSitio] = useState<string>('');
+  
+  // No necesitamos el estado 'filteredVeedores' ya que el filtro se hace en el servidor.
+  // const [filteredVeedores, setFilteredVeedores] = useState<Veedor[]>([]);
 
   // Estado para el modal de edición
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVeedor, setEditingVeedor] = useState<Partial<Veedor> | null>(null);
   const [editFeedback, setEditFeedback] = useState('');
 
-  const obtenerVeedores = async () => { setLoading(true); setError(null); const { data, error } = await supabase.from('veedores').select('*').order('id', { ascending: true }); if (error) { setError("Error al cargar datos: " + error.message); } else { setVeedores(data as Veedor[]); } setLoading(false); };
-  useEffect(() => { obtenerVeedores(); }, []);
+  // Función para obtener veedores con filtros
+  const obtenerVeedores = async (
+    filters: {
+      codSitio?: string;
+      ciudad?: string;
+      departamento?: string;
+      codCiudad?: string;
+      sitio?: string;
+    } = {}
+  ) => {
+    setLoading(true);
+    setError(null);
+    let query = supabase.from('veedores').select('*').order('id', { ascending: true });
 
-  // Efecto para el filtrado dinámico
+    if (filters.codSitio) {
+      query = query.ilike('Cod_Sitio', `%${filters.codSitio}%`);
+    }
+    if (filters.ciudad) {
+      query = query.ilike('ciudad', `%${filters.ciudad}%`);
+    }
+    if (filters.departamento) {
+      query = query.ilike('departamento', `%${filters.departamento}%`);
+    }
+    if (filters.codCiudad) {
+      query = query.ilike('Cod_Ciudad', `%${filters.codCiudad}%`);
+    }
+    if (filters.sitio) {
+      query = query.ilike('sitio', `%${filters.sitio}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      setError("Error al cargar datos: " + error.message);
+    } else {
+      setVeedores(data as Veedor[]);
+    }
+    setLoading(false);
+  };
+  
+  // Llama a la función de obtención de datos al cargar la página
   useEffect(() => {
-    const filtered = veedores.filter(veedor => {
-      const matchCodSitio = veedor['Cod_Sitio']?.toLowerCase().includes(searchCodSitio.toLowerCase());
-      const matchCiudad = veedor['ciudad']?.toLowerCase().includes(searchCiudad.toLowerCase());
-      const matchDepartamento = veedor['departamento']?.toLowerCase().includes(searchDepartamento.toLowerCase());
-      const matchCodCiudad = String(veedor['Cod_Ciudad'])?.toLowerCase().includes(searchCodCiudad.toLowerCase());
-      const matchSitio = veedor['sitio']?.toLowerCase().includes(searchSitio.toLowerCase()); // Nueva condición de filtro
+    obtenerVeedores();
+  }, []);
 
-      return matchCodSitio && matchCiudad && matchDepartamento && matchCodCiudad && matchSitio;
-    });
-    setFilteredVeedores(filtered);
-  }, [veedores, searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio]);
+  // UseEffect para el filtrado dinámico en el servidor
+  useEffect(() => {
+    // Si no hay términos de búsqueda, muestra todos los veedores
+    if (!searchCodSitio && !searchCiudad && !searchDepartamento && !searchCodCiudad && !searchSitio) {
+      obtenerVeedores();
+      return;
+    }
+
+    // Llama a la API con los filtros
+    const delayDebounceFn = setTimeout(() => {
+      obtenerVeedores({
+        codSitio: searchCodSitio,
+        ciudad: searchCiudad,
+        departamento: searchDepartamento,
+        codCiudad: searchCodCiudad,
+        sitio: searchSitio
+      });
+    }, 500); // Debounce de 500ms para evitar múltiples llamadas a la API al escribir
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio]);
 
   const handleSelectRow = (id: number) => { setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]); };
   const handleSelectAll = () => { setSelectedRows(selectedRows.length === veedores.length ? [] : veedores.map(v => v.id)); };
-  const handleDeleteSelected = async () => { if (selectedRows.length === 0) return; const confirmDelete = window.confirm(`¿Seguro que quieres eliminar ${selectedRows.length} registro(s)?`); if (confirmDelete) { setLoading(true); const { error } = await supabase.from('veedores').delete().in('id', selectedRows); if (error) { setError("Error al eliminar: " + error.message); } else { await obtenerVeedores(); setSelectedRows([]); } setLoading(false); } };
+  
+  const handleDeleteSelected = async () => { 
+    if (selectedRows.length === 0) return; 
+    const confirmDelete = window.confirm(`¿Seguro que quieres eliminar ${selectedRows.length} registro(s)?`); 
+    if (confirmDelete) { 
+      setLoading(true); 
+      const { error } = await supabase.from('veedores').delete().in('id', selectedRows); 
+      if (error) { 
+        setError("Error al eliminar: " + error.message); 
+      } else { 
+        await obtenerVeedores(); 
+        setSelectedRows([]); 
+      } 
+      setLoading(false); 
+    } 
+  };
 
   // Función para eliminar una fila individual
   const handleDeleteRow = async (id: number) => {
@@ -237,7 +303,7 @@ export default function VeedoresPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredVeedores.map((veedor, index) => (
+                {veedores.map((veedor, index) => (
                   <tr key={veedor.id} style={{ ...styles.tr, backgroundColor: selectedRows.includes(veedor.id) ? '#E0E7FF' : (hoveredRowId === veedor.id ? '#F9FAFB' : 'transparent') }} onMouseEnter={() => setHoveredRowId(veedor.id)} onMouseLeave={() => setHoveredRowId(null)}>
                     <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
                     <td style={styles.td}>{index + 1}</td>
