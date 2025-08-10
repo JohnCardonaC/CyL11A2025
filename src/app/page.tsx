@@ -19,7 +19,7 @@ const ChevronLeftIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20
 const ChevronRightIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>);
 
 // Interfaces
-interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; }
+interface Veedor { id: number; nodo: string | null; departamento: string | null; "Cod_Ciudad": number | null; "COD CYL": number | null; ppal: string | null; ciudad: string | null; "Cod_Sitio": string | null; "Fecha aplica": string | null; hora: string | null; sitio: string | null; direccion: string | null; barrio: string | null; salones: number | null; "CITADOS 10": number | null; contrato: string | null; capacita: string | null; nombres: string | null; apellidos: string | null; cedula: string | null; celular: string | null; correo: string | null; banco: string | null; "Tipo Cuenta": string | null; "No. Cuenta": string | null; createdAt: string | null; A: boolean | null; B: boolean | null; C: boolean | null; D: boolean | null; E: boolean | null; F: boolean | null; }
 type RawVeedorData = { [key: string]: string | number; };
 
 // Definición de todas las columnas de la tabla
@@ -48,9 +48,12 @@ const allColumns = [
   { key: 'banco', label: 'Banco' },
   { key: 'Tipo Cuenta', label: 'Tipo Cuenta' },
   { key: 'No. Cuenta', label: 'No. Cuenta' },
-  { key: 'A', label: 'A' },
-  { key: 'B', label: 'B' },
-  { key: 'C', label: 'C' },
+  { key: 'A', label: 'Llegada sitio Mañana' },
+  { key: 'B', label: 'Entrega material mañana' },
+  { key: 'C', label: 'Finalizó mañana' },
+  { key: 'D', label: 'Llegada sitio tarde' },
+  { key: 'E', label: 'Entrega material tarde' },
+  { key: 'F', label: 'Finalizó tarde' },
 ];
 
 const formatDisplayDate = (dateString: string | null | undefined) => { if (!dateString) return '-'; const date = new Date(dateString); return date.toLocaleDateString('es-CO', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }); };
@@ -76,6 +79,9 @@ export default function VeedoresPage() {
   const [filterA, setFilterA] = useState<boolean>(false);
   const [filterB, setFilterB] = useState<boolean>(false);
   const [filterC, setFilterC] = useState<boolean>(false);
+  const [filterD, setFilterD] = useState<boolean>(false);
+  const [filterE, setFilterE] = useState<boolean>(false);
+  const [filterF, setFilterF] = useState<boolean>(false);
 
   // Estado para la paginación
   const [currentPage, setCurrentPage] = useState(0);
@@ -104,6 +110,9 @@ export default function VeedoresPage() {
       A?: boolean;
       B?: boolean;
       C?: boolean;
+      D?: boolean;
+      E?: boolean;
+      F?: boolean;
     } = {},
     page: number = 0
   ) => {
@@ -135,6 +144,15 @@ export default function VeedoresPage() {
     }
     if (filters.C) {
       query = query.eq('C', true);
+    }
+    if (filters.D) {
+      query = query.eq('D', true);
+    }
+    if (filters.E) {
+      query = query.eq('E', true);
+    }
+    if (filters.F) {
+      query = query.eq('F', true);
     }
 
     if (itemsPerPage !== -1) {
@@ -174,11 +192,14 @@ export default function VeedoresPage() {
         A: filterA,
         B: filterB,
         C: filterC,
+        D: filterD,
+        E: filterE,
+        F: filterF,
       }, 0);
     }, 500); // Debounce de 500ms para evitar múltiples llamadas a la API al escribir
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, filterA, filterB, filterC]);
+  }, [searchCodSitio, searchCiudad, searchDepartamento, searchCodCiudad, searchSitio, filterA, filterB, filterC, filterD, filterE, filterF]);
 
 
   const handleSelectRow = (id: number) => { setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]); };
@@ -265,7 +286,7 @@ export default function VeedoresPage() {
     );
   };
   
-  // Manejador para los checkboxes de las columnas A, B, C
+  // Manejador para los checkboxes de las columnas A, B, C, D, E, F
   const handleCheckboxChange = async (id: number, key: keyof Veedor, value: boolean) => {
     setLoading(true);
     const { error } = await supabase
@@ -332,12 +353,31 @@ export default function VeedoresPage() {
     }
   };
 
-  const isAnyFilterActive = searchCodSitio || searchCiudad || searchDepartamento || searchCodCiudad || searchSitio || filterA || filterB || filterC;
+  const isAnyFilterActive = searchCodSitio || searchCiudad || searchDepartamento || searchCodCiudad || searchSitio || filterA || filterB || filterC || filterD || filterE || filterF;
   const showPagination = !isAnyFilterActive && itemsPerPage !== -1;
 
   const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setItemsPerPage(Number(e.target.value));
     setCurrentPage(0);
+  };
+
+  const booleanColumns = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const booleanFilterStates = {
+    A: filterA, B: filterB, C: filterC, D: filterD, E: filterE, F: filterF
+  };
+  const setBooleanFilterStates = {
+    A: setFilterA, B: setFilterB, C: setFilterC, D: setFilterD, E: setFilterE, F: setFilterF
+  };
+  const getLabelForBooleanFilter = (key: string) => {
+    switch (key) {
+      case 'A': return 'Llegada sitio Mañana';
+      case 'B': return 'Entrega material mañana';
+      case 'C': return 'Finalizó mañana';
+      case 'D': return 'Llegada sitio tarde';
+      case 'E': return 'Entrega material tarde';
+      case 'F': return 'Finalizó tarde';
+      default: return '';
+    }
   };
 
   return (
@@ -370,18 +410,12 @@ export default function VeedoresPage() {
               <input type="text" placeholder="Buscar por Cod_Ciudad..." value={searchCodCiudad} onChange={(e) => setSearchCodCiudad(e.target.value)} style={styles.searchInput} />
             </div>
             <div style={styles.filterCheckboxContainer}>
-              <label style={styles.filterCheckboxLabel}>
-                <input type="checkbox" checked={filterA} onChange={(e) => setFilterA(e.target.checked)} />
-                Columna A marcada
-              </label>
-              <label style={styles.filterCheckboxLabel}>
-                <input type="checkbox" checked={filterB} onChange={(e) => setFilterB(e.target.checked)} />
-                Columna B marcada
-              </label>
-              <label style={styles.filterCheckboxLabel}>
-                <input type="checkbox" checked={filterC} onChange={(e) => setFilterC(e.target.checked)} />
-                Columna C marcada
-              </label>
+              {booleanColumns.map(key => (
+                <label key={key} style={styles.filterCheckboxLabel}>
+                  <input type="checkbox" checked={booleanFilterStates[key as keyof typeof booleanFilterStates]} onChange={(e) => setBooleanFilterStates[key as keyof typeof booleanFilterStates](e.target.checked)} />
+                  {getLabelForBooleanFilter(key)}
+                </label>
+              ))}
             </div>
           </div>
           <div style={styles.actionsContainer}>
@@ -420,16 +454,19 @@ export default function VeedoresPage() {
         {error && <p style={{ color: 'red' }}>{error}</p>}
         {!loading && !error && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#4B5563' }}>
-              <span>Registros por página:</span>
-              <select value={itemsPerPage} onChange={handleItemsPerPageChange} style={styles.selectInput}>
-                <option value="50">50</option>
-                <option value="100">100</option>
-                <option value="200">200</option>
-                <option value="500">500</option>
-                <option value="1000">1000</option>
-                <option value="-1">Todos</option>
-              </select>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#4B5563' }}>
+              <span>Registros: {totalRecords}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>Registros por página:</span>
+                <select value={itemsPerPage} onChange={handleItemsPerPageChange} style={styles.selectInput}>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                  <option value="500">500</option>
+                  <option value="1000">1000</option>
+                  <option value="-1">Todos</option>
+                </select>
+              </div>
             </div>
             <div style={styles.tableContainer}>
               <table style={styles.table}>
@@ -450,9 +487,8 @@ export default function VeedoresPage() {
                       <td style={styles.td}><input type="checkbox" checked={selectedRows.includes(veedor.id)} onChange={() => handleSelectRow(veedor.id)} style={{ cursor: 'pointer' }} /></td>
                       <td style={styles.td}>{itemsPerPage === -1 ? (index + 1) : (currentPage * itemsPerPage + index + 1)}</td>
                       {visibleColumns.map(key => {
-                          const column = allColumns.find(col => col.key === key);
-                          // Lógica especial para las columnas A, B y C
-                          if (['A', 'B', 'C'].includes(key)) {
+                          // Lógica especial para las columnas booleanas
+                          if (booleanColumns.includes(key)) {
                             return (
                               <td key={key} style={{...styles.td, textAlign: 'center'}}>
                                   <input
@@ -510,7 +546,7 @@ export default function VeedoresPage() {
             <form onSubmit={handleEditSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               {allColumns.filter(col => col.key !== 'id' && col.key !== 'createdAt').map(col => {
                 const key = col.key as keyof Veedor;
-                const isBoolean = ['A', 'B', 'C'].includes(key);
+                const isBoolean = booleanColumns.includes(key);
                 return (
                   <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <label htmlFor={key} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{col.label}</label>
@@ -561,7 +597,7 @@ export default function VeedoresPage() {
             <form onSubmit={handleAgregarSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               {allColumns.filter(col => col.key !== 'id' && col.key !== 'createdAt').map(col => {
                 const key = col.key as keyof Veedor;
-                const isBoolean = ['A', 'B', 'C'].includes(key);
+                const isBoolean = booleanColumns.includes(key);
                 return (
                   <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <label htmlFor={key} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>{col.label}</label>
@@ -619,21 +655,23 @@ const styles: { [key: string]: React.CSSProperties } = {
     searchInput: { border: 'none', outline: 'none', padding: '0', fontSize: '1rem', width: '100%', color: '#111827' },
     actionsContainer: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', flexShrink: 0 },
     tableContainer: { overflowX: 'auto', border: '1px solid #E5E7EB', borderRadius: '0.75rem', backgroundColor: 'white', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' },
-    table: { width: '100%', borderCollapse: 'collapse', whiteSpace: 'nowrap' },
+    table: { width: '100%', borderCollapse: 'collapse' },
     trHeader: { borderBottom: '1px solid #E5E7EB' },
-    th: { padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', fontSize: '0.75rem' },
-    td: { padding: '0.75rem 1rem', borderTop: '1px solid #E5E7EB', color: '#374151', fontSize: '0.875rem' },
+    th: { padding: '0.75rem 0.5rem', textAlign: 'left', fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', fontSize: '0.75rem', minWidth: '100px', whiteSpace: 'normal', verticalAlign: 'bottom' },
+    td: { padding: '0.75rem 0.5rem', borderTop: '1px solid #E5E7EB', color: '#374151', fontSize: '0.875rem', minWidth: '100px' },
     tr: { transition: 'background-color 0.2s ease-in-out' },
     deleteButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s, opacity 0.2s', },
     deleteButtonDisabled: { backgroundColor: '#9CA3AF', cursor: 'not-allowed', opacity: 0.6 },
     importButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #3B82F6', borderRadius: '0.375rem', backgroundColor: 'white', color: '#3B82F6', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s' },
     addButton: { padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #16A34A', borderRadius: '0.375rem', backgroundColor: '#ECFDF5', color: '#16A34A', cursor: 'pointer', fontWeight: 600, transition: 'background-color 0.2s' },
     
-    // -- NUEVOS ESTILOS PARA PAGINACIÓN --
+    // -- NUEVOS ESTILOS PARA PAGINACIÓN Y FILTROS --
     paginationContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' },
     paginationButton: { padding: '0.5rem 1rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', fontWeight: 500, color: '#374151', display: 'flex', alignItems: 'center', gap: '0.5rem' },
     pageNumber: { fontSize: '1rem', fontWeight: 600, color: '#374151' },
     selectInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', backgroundColor: 'white', cursor: 'pointer', color: '#4B5563' },
+    filterCheckboxContainer: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' },
+    filterCheckboxLabel: { display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', color: '#111827' },
     
     // -- ESTILOS DE DROPDOWN Y MODAL --
     columnsDropdownContainer: { position: 'relative', display: 'inline-block' },
@@ -654,6 +692,4 @@ const styles: { [key: string]: React.CSSProperties } = {
     actionsCell: { display: 'flex', gap: '0.5rem', justifyContent: 'center' },
     actionButton: { background: 'none', border: '1px solid #D1D5DB', padding: '0.5rem', borderRadius: '0.375rem', cursor: 'pointer', color: '#6B7280', transition: 'background-color 0.2s', },
     editInput: { padding: '0.5rem 0.75rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', transition: 'border-color 0.2s', color: '#111827' },
-    filterCheckboxContainer: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
-    filterCheckboxLabel: { display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', color: '#111827' },
 };
