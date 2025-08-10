@@ -153,7 +153,7 @@ export default function VeedoresPage() {
     window.addEventListener('resize', setScrollWidth);
 
     // Lógica para sincronizar el scroll
-    const syncScroll = (event) => {
+    const syncScroll = (event: Event) => {
         if (event.target === tableContainer) {
             topScroll.scrollLeft = tableContainer.scrollLeft;
             scrollPositionRef.current.left = tableContainer.scrollLeft; // Guardar la posición
